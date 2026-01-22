@@ -18,10 +18,14 @@ Desarrollar un ecosistema tecnológico que permita a los residentes de la Repúb
 
 ## Tecnologias
 ### GIS
-**Geolocalización en tiempo real** para 
+**Geolocalización en tiempo real** 
+Geolocalización en tiempo real para registrar con precisión las coordenadas exactas de cada reporte y visualizar la distribución espacial de los problemas urbanos.
 
 
 ### App movil
-
+**Reporte ciudadano**
+Interfaz intuitiva para que los usuarios capturen fotos de las incidencias las describan brevemente y reciban notificaciones sobre el estado de la solución.
 
 ### Dashboard web
+**Gestión y análisis**
+Panel de control para que las autoridades visualicen todos los reportes en el mapa, gestionen su priorización y consulten estadísticas de resolución.
