@@ -1,5 +1,20 @@
-# modulo-apertura-seaaaaaaaaaaaaaaa
-Integracion de una funcionalidad dentro de la plataforma Banner que permita a los estudiantes realizar peticiones formales para la apertura de nuevas secciones de asignaturas
+# Barrio Inteligente
 
-## Objetivo:
-Eliminar el proceso manual de recolección de firmas e identificaciones físicas, centralizando las solicitudes de cupos y secciones de manera digital y automática para las autoridades académicas.
+## Descripcion
+Plataforma de roportaje urbano colaborativa.
+
+## Problema
+Falta de atención y priorización de problemas urbanos cotidianos que afectan la calidad de vida.
+
+## Objetivo
+Desarrollar un ecosistema tecnológico que permita a los residentes de la República Dominicana reportar incidencias urbanas en tiempo real mediante un mapa colaborativo, facilitando a las autoridades y líderes comunitarios la visualización, análisis y resolución de estos problemas mediante un panel de control centralizado.
+
+## Integrantes
+
+
+## Tecnologias
+### GIS
+
+### App movil
+
+### Dashboard web
