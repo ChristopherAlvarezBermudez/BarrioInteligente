@@ -28,6 +28,28 @@ Geolocalización en tiempo real para registrar con precisión las coordenadas ex
 **Reporte ciudadano**  
 Interfaz intuitiva para que los usuarios capturen fotos de las incidencias las describan brevemente y reciban notificaciones sobre el estado de la solución.
 
-### Dashboard web
-**Gestión y análisis**
-Panel de control para que las autoridades visualicen todos los reportes en el mapa, gestionen su priorización y consulten estadísticas de resolución.
+### Dashboard Web
+**Gestión y análisis con ASP.NET Core y MySQL**
+Panel de control desarrollado en **ASP.NET Core MVC (.NET 8)**. Permite a las autoridades visualizar y gestionar los reportes.
+* **Backend:** C# / .NET 8
+* **Base de Datos:** MySQL (MariaDB/XAMPP)
+* **Conector:** MySql.Data
+* **Funcionalidad:** CRUD completo (Crear, Leer, Listar) de incidencias.
+
+## Configuración del Proyecto
+
+### 1. Base de Datos (Script SQL)
+Para ejecutar este proyecto localmente, es necesario crear la base de datos en MySQL utilizando el siguiente script:
+
+```sql
+CREATE DATABASE BarrioInteligenteDb;
+USE BarrioInteligenteDb;
+
+CREATE TABLE Reportes (
+    Id INT AUTO_INCREMENT PRIMARY KEY,
+    Titulo VARCHAR(100) NOT NULL,
+    Descripcion TEXT,
+    Categoria VARCHAR(50) NOT NULL,
+    Ubicacion VARCHAR(200) NOT NULL,
+    Fecha DATETIME DEFAULT CURRENT_TIMESTAMP
+);
