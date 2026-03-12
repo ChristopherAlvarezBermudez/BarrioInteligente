@@ -38,4 +38,4 @@ namespace BarrioInteligenteWeb.Data
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }
-}
+}
