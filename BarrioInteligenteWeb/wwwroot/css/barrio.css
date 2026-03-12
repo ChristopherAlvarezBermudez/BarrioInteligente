@@ -560,3 +560,90 @@ html, body {
 .hidden-input {
     display: none;
 }
+
+/* ===== TEMA ROJO DE ACENTO ===== */
+:root {
+    --acento-rojo: #d90429;
+    --acento-rojo-hover: #b00320;
+    --acento-rojo-sutil: rgba(217, 4, 41, 0.15);
+}
+
+/* 1. Hotbar (Bottom Navigation) - Pestaña Activa */
+.bottom-nav a.active {
+    color: var(--acento-rojo) !important;
+}
+.bottom-nav a.active::after {
+    background: var(--acento-rojo) !important;
+}
+
+/* 2. Botones Principales (Reemplaza los botones negros y primarios) */
+.btn-primary-black,
+.btn-primary {
+    background-color: var(--acento-rojo) !important;
+    border-color: var(--acento-rojo) !important;
+    color: #fff !important;
+    border-radius: 14px !important; /* Ligeramente más redondeado */
+}
+.btn-primary-black:hover,
+.btn-primary:hover {
+    background-color: var(--acento-rojo-hover) !important;
+    border-color: var(--acento-rojo-hover) !important;
+    color: #fff !important;
+}
+
+/* Botón Confirmar Reporte específico (y otros outline) */
+.btn-confirmar {
+    background: var(--acento-rojo) !important;
+    border: 2px solid var(--acento-rojo) !important;
+    color: #ffffff !important;
+    border-radius: 14px !important;
+}
+.btn-confirmar:hover {
+    background: var(--acento-rojo-hover) !important;
+    border-color: var(--acento-rojo-hover) !important;
+}
+
+/* 3. Inputs (Formularios) - Focus con borde rojo */
+.form-control:focus,
+.auth-field input:focus,
+.desc-box textarea:focus {
+    border-color: var(--acento-rojo) !important;
+    box-shadow: 0 0 0 0.25rem var(--acento-rojo-sutil) !important;
+    outline: none !important;
+}
+
+/* 4. Detalles Sutiles (Enlaces, Categoría Seleccionada, Notificaciones) */
+a {
+    color: var(--acento-rojo);
+}
+a:hover {
+    color: var(--acento-rojo-hover);
+}
+
+.auth-link a,
+.footer a {
+    color: var(--acento-rojo) !important;
+}
+.auth-link a:hover,
+.footer a:hover {
+    text-decoration: underline !important;
+}
+
+/* Categoría seleccionada en la vista Crear */
+.category-btn.selected {
+    border-color: var(--acento-rojo) !important;
+    background: var(--acento-rojo) !important;
+    color: #fff !important;
+}
+.category-btn.selected svg {
+    color: #fff !important;
+}
+
+/* Botón flotante FAB (si se usa) y Header Back Button al hacer hover */
+.fab, .fab-fixed {
+    background: var(--acento-rojo) !important;
+}
+.btn-back:hover, .btn-user-icon:hover {
+    color: var(--acento-rojo) !important;
+    border-color: var(--acento-rojo) !important;
+}
