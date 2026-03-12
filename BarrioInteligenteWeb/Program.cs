@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.HttpOverrides;
 using Serilog;
 using BarrioInteligenteWeb.Data;
 
@@ -40,7 +41,19 @@ try
 
     builder.Services.AddControllersWithViews();
 
+    // Soporte para proxy inverso (ngrok u otro túnel)
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        // Aceptar tráfico de cualquier proxy/red (necesario para túneles locales)
+        options.KnownNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
+
     var app = builder.Build();
+
+    // Debe ir primero: transforma los headers X-Forwarded-* antes que el resto del pipeline
+    app.UseForwardedHeaders();
 
     if (!app.Environment.IsDevelopment())
     {
