@@ -28,6 +28,16 @@ namespace BarrioInteligenteWeb.Controllers
             return View();
         }
 
+        // GET: /Account/Perfil
+        [Microsoft.AspNetCore.Authorization.Authorize]
+        public IActionResult Perfil()
+        {
+            var id = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var usuario = _context.Usuarios.FirstOrDefault(u => u.Id == id);
+            if (usuario == null) return RedirectToAction("Login");
+            return View(usuario);
+        }
+
         // POST: /Account/Login
         [HttpPost]
         [ValidateAntiForgeryToken]

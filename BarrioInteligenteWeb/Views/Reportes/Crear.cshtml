@@ -11,29 +11,55 @@
     <title>Nuevo Reporte — Barrio Inteligente</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/barrio.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #map-picker {
+            width: 100%;
+            height: 220px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid #e0e0e0;
+            z-index: 0;
+        }
+        .map-picker-label {
+            font-size: 12px;
+            color: #888;
+            text-align: center;
+            margin-top: 6px;
+        }
+        .location-confirmed {
+            background: #f0fff4 !important;
+            border-color: #34d399 !important;
+        }
+    </style>
 </head>
 <body>
 <div class="app-screen">
 
-    <!-- Header -->
     <header class="app-header">
-        <a href="@Url.Action("Index", "Reportes")" class="btn-back" aria-label="Volver">
+        <a href="@Url.Action("Index", "Reportes")" class="btn-back" aria-label="Volver al mapa">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"/>
             </svg>
         </a>
         <span class="app-title">Nuevo Reporte</span>
-        <button class="btn-user-icon" aria-label="Perfil">
+        <a href="@Url.Action("Perfil", "Account")" class="btn-user-icon" aria-label="Perfil">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
             </svg>
-        </button>
+        </a>
     </header>
 
-    <!-- Cuerpo scrollable -->
     <div class="app-body">
         <form asp-action="Crear" asp-controller="Reportes" method="post" enctype="multipart/form-data" class="form-body">
             @Html.AntiForgeryToken()
+
+            @if (ViewBag.ErrorGuardado != null)
+            {
+                <div style="background:#fff0f0;border:1px solid #ffcccc;border-radius:10px;padding:12px 14px;font-size:13px;color:#c0392b;">
+                    @ViewBag.ErrorGuardado
+                </div>
+            }
 
             <!-- Adjuntar imagen -->
             <label for="imgInput" class="img-upload-box" id="imgUploadLabel">
@@ -41,17 +67,25 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/>
                 </svg>
                 <span>Adjunte imagen para el reporte</span>
-                <input type="file" id="imgInput" name="Imagen" accept="image/*" class="hidden-input" />
+                <input type="file" id="imgInput" name="imagen" accept="image/*" class="hidden-input" />
             </label>
 
-            <!-- Ubicación -->
-            <div class="location-field">
+            <!-- Ubicación automática + mapa picker -->
+            <div class="location-field" id="locationField">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
                     <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/>
                 </svg>
-                <span id="ubicacionTexto">Ubicación automática: obteniendo...</span>
+                <span id="ubicacionTexto">Obteniendo ubicación GPS...</span>
                 <input type="hidden" asp-for="Ubicacion" id="Ubicacion" />
+                <input type="hidden" asp-for="Latitud" id="Latitud" value="0" />
+                <input type="hidden" asp-for="Longitud" id="Longitud" value="0" />
+            </div>
+
+            <!-- Mapa interactivo picker -->
+            <div>
+                <div id="map-picker"></div>
+                <p class="map-picker-label" id="mapPickerHint">📍 Toca el mapa para ajustar la ubicación exacta</p>
             </div>
 
             <!-- Categorías -->
@@ -81,74 +115,125 @@
                     <span>Otro</span>
                 </button>
             </div>
-            <input type="hidden" asp-for="Categoria" id="categoriaInput" required />
+            <input type="hidden" asp-for="Categoria" id="categoriaInput" />
 
             <!-- Descripción -->
             <div class="desc-box">
                 <p>Descripción del reporte</p>
-                <textarea asp-for="Descripcion" rows="5" placeholder="Escribe aquí la situación a reportar." required></textarea>
+                <textarea asp-for="Descripcion" rows="4" placeholder="Describe el problema con detalle. ¿Qué tan peligroso es? ¿Cuánto tiempo lleva así?" required></textarea>
             </div>
 
-            <!-- Campo oculto para título automático -->
             <input type="hidden" asp-for="Titulo" id="tituloInput" />
 
-            <!-- Botón subir -->
-            <button type="submit" class="btn-primary-black">
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div style="background:#fff0f0;border:1px solid #ffcccc;border-radius:10px;padding:12px 14px;font-size:13px;color:#c0392b;">
+                    Por favor completa todos los campos requeridos: categoría, descripción y ubicación.
+                </div>
+            }
+
+            <button type="submit" class="btn-primary-black" id="btnSubir">
                 SUBIR REPORTE
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" width="18" height="18">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 10.5 12 3m0 0 7.5 7.5M12 3v18"/>
                 </svg>
             </button>
         </form>
     </div>
 
-    <!-- Bottom Nav -->
     <nav class="bottom-nav">
         <a href="@Url.Action("Index", "Reportes")">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c-.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z"/>
             </svg>
             <span>Mapa</span>
         </a>
-        <a href="#" class="active">
+        <a href="@Url.Action("MisReportes", "Reportes")" class="active">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/>
             </svg>
             <span>Mis Reportes</span>
         </a>
-        <a href="#">
+        <a href="@Url.Action("Perfil", "Account")">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"/>
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
             </svg>
             <span>Perfil</span>
         </a>
     </nav>
-
 </div>
 
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+    // ===== MAP PICKER =====
+    let pickerMap = L.map('map-picker').setView([18.4861, -69.9312], 14);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap',
+        maxZoom: 19
+    }).addTo(pickerMap);
+
+    const markerIcon = L.divIcon({
+        html: '<div style="font-size:28px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.4))">📍</div>',
+        className: '',
+        iconSize: [30, 30],
+        iconAnchor: [15, 30]
+    });
+
+    let marcador = null;
+
+    function actualizarCoordenadas(lat, lon) {
+        document.getElementById('Latitud').value = lat;
+        document.getElementById('Longitud').value = lon;
+        document.getElementById('Ubicacion').value = 'Lat: ' + lat.toFixed(5) + ', Lon: ' + lon.toFixed(5);
+        document.getElementById('ubicacionTexto').textContent = '📍 Lat ' + lat.toFixed(5) + ', Lon ' + lon.toFixed(5);
+        document.getElementById('locationField').classList.add('location-confirmed');
+        document.getElementById('mapPickerHint').textContent = '✅ Ubicación confirmada. Toca otro punto para cambiar.';
+    }
+
+    pickerMap.on('click', function (e) {
+        const { lat, lng } = e.latlng;
+        if (marcador) {
+            marcador.setLatLng([lat, lng]);
+        } else {
+            marcador = L.marker([lat, lng], { icon: markerIcon, draggable: true }).addTo(pickerMap);
+            marcador.on('dragend', function () {
+                const p = marcador.getLatLng();
+                actualizarCoordenadas(p.lat, p.lng);
+            });
+        }
+        actualizarCoordenadas(lat, lng);
+    });
+
+    // GPS automático para centrar el mapa
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function (pos) {
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+            pickerMap.setView([lat, lon], 16);
+            // Poner marcador inicial en la posición GPS
+            marcador = L.marker([lat, lon], { icon: markerIcon, draggable: true }).addTo(pickerMap);
+            marcador.on('dragend', function () {
+                const p = marcador.getLatLng();
+                actualizarCoordenadas(p.lat, p.lng);
+            });
+            actualizarCoordenadas(lat, lon);
+        }, function () {
+            document.getElementById('ubicacionTexto').textContent = 'Toca el mapa para seleccionar ubicación.';
+        }, { enableHighAccuracy: true, timeout: 10000 });
+    }
+
+    // ===== CATEGORÍAS =====
     function seleccionarCategoria(btn) {
         document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
         document.getElementById('categoriaInput').value = btn.dataset.categoria;
-        document.getElementById('tituloInput').value = btn.dataset.categoria + ' reportado';
+        document.getElementById('tituloInput').value = btn.dataset.categoria + ' en ' +
+            (document.getElementById('Ubicacion').value || 'zona reportada');
     }
 
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(function (pos) {
-            const lat = pos.coords.latitude.toFixed(5);
-            const lon = pos.coords.longitude.toFixed(5);
-            const texto = 'Lat: ' + lat + ', Lon: ' + lon;
-            document.getElementById('ubicacionTexto').textContent = 'Ubicación: ' + texto;
-            document.getElementById('Ubicacion').value = texto;
-        }, function () {
-            document.getElementById('ubicacionTexto').textContent = 'Ubicación automática: no disponible';
-            document.getElementById('Ubicacion').value = 'No disponible';
-        });
-    }
-
+    // ===== PREVIEW IMAGEN =====
     document.getElementById('imgInput').addEventListener('change', function () {
         if (this.files && this.files[0]) {
             const label = document.getElementById('imgUploadLabel');
@@ -158,6 +243,17 @@
             label.querySelector('svg').style.display = 'none';
             label.querySelector('span').style.display = 'none';
         }
+    });
+
+    // ===== VALIDACIÓN ANTES DE ENVIAR =====
+    document.querySelector('form').addEventListener('submit', function (e) {
+        if (!document.getElementById('categoriaInput').value) {
+            e.preventDefault();
+            alert('Por favor selecciona una categoría.');
+            return;
+        }
+        document.getElementById('btnSubir').textContent = 'Subiendo...';
+        document.getElementById('btnSubir').disabled = true;
     });
 </script>
 </body>

@@ -107,7 +107,7 @@ html, body {
     font-weight: 500;
 }
 
-/* ---- FAB (botón flotante) ---- */
+/* ---- FAB (botón flotante) — versión relativa (legado) ---- */
 .fab {
     position: absolute;
     bottom: 24px;
@@ -130,6 +130,34 @@ html, body {
     z-index: 50;
 }
 
+/* ---- FAB fijo — por encima de Leaflet y del bottom nav ---- */
+.fab-fixed {
+    position: fixed;
+    bottom: 80px;
+    right: calc(50% - 215px + 16px);
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #111;
+    color: #fff;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    z-index: 9999;
+}
+
+@media (max-width: 430px) {
+    .fab-fixed {
+        right: 16px;
+    }
+}
+
+.fab-fixed:hover,
 .fab:hover {
     transform: scale(1.08);
     box-shadow: 0 6px 20px rgba(0,0,0,0.35);

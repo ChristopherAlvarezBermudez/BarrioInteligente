@@ -2,8 +2,6 @@
 @{
     Layout = null;
     ViewData["Title"] = "Mapa";
-    bool soloMios = ViewBag.SoloMios == true;
-    int usuarioId = ViewBag.UsuarioId ?? 0;
 }
 <!DOCTYPE html>
 <html lang="es">
@@ -15,15 +13,53 @@
     <link rel="stylesheet" href="~/css/barrio.css" asp-append-version="true" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        #mapa { width: 100%; height: calc(100dvh - 57px - 64px); }
+        #mapa {
+            width: 100%;
+            height: calc(100dvh - 57px - 64px);
+        }
+
+        /* ---- Botón GPS personalizado Leaflet ---- */
+        .leaflet-gps-btn {
+            width: 34px;
+            height: 34px;
+            background: #fff;
+            border: 2px solid rgba(0,0,0,0.25);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.25);
+            transition: background 0.15s;
+            padding: 0;
+        }
+        .leaflet-gps-btn:hover {
+            background: #f4f4f4;
+        }
+        .leaflet-gps-btn svg {
+            width: 18px;
+            height: 18px;
+            color: #555;
+            transition: color 0.15s;
+        }
+        .leaflet-gps-btn.locating svg {
+            color: #4285F4;
+            animation: gps-spin 1s linear infinite;
+        }
+        .leaflet-gps-btn.located svg {
+            color: #4285F4;
+        }
+        @@keyframes gps-spin {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
 <div class="app-screen">
 
-    <!-- Header -->
     <header class="app-header">
-        <span class="app-title">@(soloMios ? "Mis Reportes" : "Barrio Inteligente")</span>
+        <span class="app-title">Barrio Inteligente</span>
         <form asp-controller="Account" asp-action="Logout" method="post" style="margin:0">
             @Html.AntiForgeryToken()
             <button type="submit" class="btn-user-icon" title="Cerrar sesión" aria-label="Cerrar sesión">
@@ -34,36 +70,31 @@
         </form>
     </header>
 
-    <!-- Mapa Leaflet -->
-    <div style="position:relative;flex:1;">
-        <div id="mapa"></div>
+    <div id="mapa"></div>
 
-        <!-- FAB -->
-        <a href="@Url.Action("Crear", "Reportes")" class="fab" aria-label="Crear reporte">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="24" height="24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
-            </svg>
-        </a>
-    </div>
+    <!-- FAB fijo encima del bottom nav -->
+    <a href="@Url.Action("Crear", "Reportes")" class="fab-fixed" aria-label="Crear reporte">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="26" height="26">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+        </svg>
+    </a>
 
-    <!-- Bottom Nav -->
     <nav class="bottom-nav">
-        <a href="@Url.Action("Index", "Reportes")" class="@(!soloMios ? "active" : "")">
+        <a href="@Url.Action("Index", "Reportes")" class="active">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z"/>
             </svg>
             <span>Mapa</span>
         </a>
-        <a href="@Url.Action("MisReportes", "Reportes")" class="@(soloMios ? "active" : "")">
+        <a href="@Url.Action("MisReportes", "Reportes")">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/>
             </svg>
             <span>Mis Reportes</span>
         </a>
-        <a href="#">
+        <a href="@Url.Action("Perfil", "Account")">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"/>
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
             </svg>
             <span>Perfil</span>
         </a>
@@ -74,46 +105,151 @@
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    const reportes = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Select(r => new {
-        r.Id, r.Titulo, r.Categoria, r.Estado, r.Upvotes,
-        r.Latitud, r.Longitud,
-        detallesUrl = Url.Action("Detalles", "Reportes", new { id = r.Id })
-    })));
+    const reportes = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        Model.Select(r => new {
+            r.Id,
+            r.Titulo,
+            r.Categoria,
+            r.Estado,
+            r.Upvotes,
+            r.Latitud,
+            r.Longitud,
+            detallesUrl = Url.Action("Detalles", "Reportes", new { id = r.Id })
+        }),
+        new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }
+    ));
 
-    const defaultLat = reportes.length > 0 && reportes[0].latitud !== 0
-        ? reportes[0].latitud : 18.4861;
-    const defaultLon = reportes.length > 0 && reportes[0].longitud !== 0
-        ? reportes[0].longitud : -69.9312;
+    const reportesConCoordenadas = reportes.filter(r => r.latitud !== 0 || r.longitud !== 0);
 
-    const map = L.map('mapa').setView([defaultLat, defaultLon], 14);
+    let defaultLat = 18.4861;
+    let defaultLon = -69.9312;
+
+    if (reportesConCoordenadas.length > 0) {
+        defaultLat = reportesConCoordenadas[0].latitud;
+        defaultLon = reportesConCoordenadas[0].longitud;
+    }
+
+    const map = L.map('mapa').setView([defaultLat, defaultLon], 15);
+    setTimeout(() => { map.invalidateSize(); }, 100);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap',
+        attribution: '© <a href="https://www.openstreetmap.org/">OpenStreetMap</a>',
         maxZoom: 19
     }).addTo(map);
 
-    const iconoCategoria = {
-        'Bache':  '🚧',
-        'Basura': '🗑️',
-        'Luz':    '💡',
-        'Otro':   '📍'
-    };
+    const emojiCategoria = { 'Bache': '🚧', 'Basura': '🗑️', 'Luz': '💡', 'Otro': '📍' };
 
     reportes.forEach(r => {
         if (r.latitud === 0 && r.longitud === 0) return;
-        const emoji = iconoCategoria[r.categoria] || '📍';
+
+        const emoji = emojiCategoria[r.categoria] || '📍';
         const icon = L.divIcon({
-            html: `<div style="font-size:22px;line-height:1;">${emoji}</div>`,
+            html: `<div style="font-size:26px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.4));line-height:1;">${emoji}</div>`,
             className: '',
-            iconSize: [30, 30],
-            iconAnchor: [15, 15]
+            iconSize: [34, 34],
+            iconAnchor: [17, 17]
         });
-        const marker = L.marker([r.latitud, r.longitud], { icon }).addTo(map);
-        marker.bindPopup(`
-            <strong>${r.titulo}</strong><br>
-            <small>${r.categoria} · ${r.estado} · ✅ ${r.upvotes}</small><br>
-            <a href="${r.detallesUrl}" style="color:#111;font-weight:600;font-size:12px;">Ver detalles →</a>
-        `);
+
+        L.marker([r.latitud, r.longitud], { icon })
+            .addTo(map)
+            .bindPopup(`
+                <div style="font-family:'Inter',sans-serif;min-width:160px;">
+                    <strong style="font-size:14px;color:#111;">${r.titulo}</strong><br>
+                    <small style="color:#777;">${r.categoria} · ${r.estado} · ✅ ${r.upvotes}</small><br>
+                    <a href="${r.detallesUrl}"
+                       style="display:inline-block;margin-top:8px;padding:6px 12px;background:#111;color:#fff;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;">
+                        Ver detalles →
+                    </a>
+                </div>
+            `, { maxWidth: 220 });
+    });
+
+    // ---- Centrado automático inicial (sin reportes) ----
+    if (navigator.geolocation && reportesConCoordenadas.length === 0) {
+        navigator.geolocation.getCurrentPosition(pos => {
+            map.setView([pos.coords.latitude, pos.coords.longitude], 15);
+        });
+    }
+
+    // ---- Control GPS: Mostrar mi ubicación ----
+    let userLocationMarker = null; // punto azul reutilizable
+
+    const GpsControl = L.Control.extend({
+        options: { position: 'topleft' },
+        onAdd: function () {
+            const btn = L.DomUtil.create('button', 'leaflet-gps-btn');
+            btn.title = 'Mostrar mi ubicación';
+            btn.setAttribute('aria-label', 'Mostrar mi ubicación');
+            btn.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                     stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7Z" />
+                    <circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none" />
+                </svg>`;
+
+            L.DomEvent.on(btn, 'click', function (e) {
+                L.DomEvent.stopPropagation(e);
+                btn.classList.remove('located');
+                btn.classList.add('locating');
+                map.locate({
+                    setView: true,
+                    maxZoom: 18,
+                    enableHighAccuracy: false,
+                    timeout: 30000,
+                    maximumAge: 60000
+                });
+            });
+
+            return btn;
+        }
+    });
+    const gpsControl = new GpsControl();
+    gpsControl.addTo(map);
+
+    // Cuando encuentra la ubicación: dibuja / actualiza el punto azul
+    map.on('locationfound', function (e) {
+        const btn = document.querySelector('.leaflet-gps-btn');
+        if (btn) { btn.classList.remove('locating'); btn.classList.add('located'); }
+
+        if (userLocationMarker) {
+            userLocationMarker.setLatLng(e.latlng);
+        } else {
+            userLocationMarker = L.circleMarker(e.latlng, {
+                radius: 10,
+                color: '#fff',
+                weight: 3,
+                fillColor: '#4285F4',
+                fillOpacity: 0.9
+            }).addTo(map);
+        }
+
+        const accuracy = Math.round(e.accuracy);
+        const lowAccuracy = accuracy > 100;
+
+        if (lowAccuracy) {
+            console.warn(`[GPS] Precisión baja: ±${accuracy} m. El dispositivo puede estar usando solo red/Wi-Fi.`);
+        }
+
+        userLocationMarker.bindPopup(`
+            <div style="font-family:'Inter',sans-serif;font-size:13px;color:#111;font-weight:600;">
+                📍 Estás aquí
+                <br><small style="color:${lowAccuracy ? '#e07000' : '#777'};font-weight:400;">
+                    Precisión: ±${accuracy} m${lowAccuracy ? ' ⚠️ (baja precisión)' : ''}
+                </small>
+            </div>
+        `).openPopup();
+    });
+
+    // Si el usuario deniega el permiso o hay error
+    map.on('locationerror', function (e) {
+        const btn = document.querySelector('.leaflet-gps-btn');
+        if (btn) { btn.classList.remove('locating', 'located'); }
+
+        const msg = e.code === 1
+            ? 'Permiso de ubicación denegado. Actívalo en la configuración de tu navegador.'
+            : 'No se pudo obtener tu ubicación. Intenta de nuevo.';
+        alert(msg);
     });
 </script>
 </body>

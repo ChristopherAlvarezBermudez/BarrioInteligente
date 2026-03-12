@@ -12,149 +12,197 @@ namespace BarrioInteligenteWeb.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _env;
+        private readonly ILogger<ReportesController> _logger;
 
-        public ReportesController(ApplicationDbContext context, IWebHostEnvironment env)
+        public ReportesController(
+            ApplicationDbContext context,
+            IWebHostEnvironment env,
+            ILogger<ReportesController> logger)
         {
             _context = context;
             _env = env;
+            _logger = logger;
         }
 
         private int UsuarioActualId =>
             int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-        // GET: /Reportes
         public IActionResult Index()
         {
-            var lista = _context.Reportes
-                .OrderByDescending(r => r.Fecha)
-                .ToList();
-
-            ViewBag.UsuarioId = UsuarioActualId;
-            return View(lista);
+            try
+            {
+                var lista = _context.Reportes
+                    .OrderByDescending(r => r.Fecha)
+                    .ToList();
+                ViewBag.UsuarioId = UsuarioActualId;
+                return View(lista);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar el índice de reportes");
+                return View(new List<Reporte>());
+            }
         }
 
-        // GET: /Reportes/MisReportes
         public IActionResult MisReportes()
         {
-            var lista = _context.Reportes
-                .Where(r => r.UsuarioId == UsuarioActualId)
-                .OrderByDescending(r => r.Fecha)
-                .ToList();
-
-            ViewBag.SoloMios = true;
-            ViewBag.UsuarioId = UsuarioActualId;
-            return View("Index", lista);
+            try
+            {
+                var lista = _context.Reportes
+                    .Where(r => r.UsuarioId == UsuarioActualId)
+                    .OrderByDescending(r => r.Fecha)
+                    .ToList();
+                return View("MisReportes", lista);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar Mis Reportes para usuario {UsuarioId}", UsuarioActualId);
+                return View("MisReportes", new List<Reporte>());
+            }
         }
 
-        // GET: /Reportes/Crear
-        public IActionResult Crear()
-        {
-            return View();
-        }
+        public IActionResult Crear() => View();
 
-        // POST: /Reportes/Crear
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Crear(Reporte reporte, IFormFile? imagen)
         {
-            reporte.UsuarioId = UsuarioActualId;
-            reporte.Fecha = DateTime.Now;
-
-            if (imagen != null && imagen.Length > 0)
+            try
             {
-                var uploadsDir = Path.Combine(_env.WebRootPath, "uploads");
-                Directory.CreateDirectory(uploadsDir);
+                reporte.UsuarioId = UsuarioActualId;
+                reporte.Fecha = DateTime.Now;
 
-                var ext = Path.GetExtension(imagen.FileName);
-                var fileName = $"{Guid.NewGuid()}{ext}";
-                var filePath = Path.Combine(uploadsDir, fileName);
+                if (imagen != null && imagen.Length > 0)
+                {
+                    var uploadsDir = Path.Combine(_env.WebRootPath, "uploads");
+                    Directory.CreateDirectory(uploadsDir);
 
-                using (var stream = new FileStream(filePath, FileMode.Create))
-                    await imagen.CopyToAsync(stream);
+                    var ext = Path.GetExtension(imagen.FileName).ToLowerInvariant();
+                    if (!new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" }.Contains(ext))
+                    {
+                        _logger.LogWarning("Tipo de archivo no permitido: {Extension} por usuario {UsuarioId}", ext, UsuarioActualId);
+                        ModelState.AddModelError("imagen", "Solo se permiten imágenes (.jpg, .png, .webp).");
+                        return View(reporte);
+                    }
 
-                reporte.ImagenUrl = $"/uploads/{fileName}";
+                    var fileName = $"{Guid.NewGuid()}{ext}";
+                    var filePath = Path.Combine(uploadsDir, fileName);
+
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                        await imagen.CopyToAsync(stream);
+
+                    reporte.ImagenUrl = $"/uploads/{fileName}";
+                    _logger.LogInformation("Imagen guardada: {Path}", reporte.ImagenUrl);
+                }
+
+                ModelState.Remove("Usuario");
+                if (ModelState.IsValid)
+                {
+                    _context.Reportes.Add(reporte);
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation("Reporte creado ID={Id} por usuario {UsuarioId}", reporte.Id, UsuarioActualId);
+                    return RedirectToAction(nameof(Index));
+                }
             }
-
-            ModelState.Remove("Usuario");
-            if (ModelState.IsValid)
+            catch (Exception ex)
             {
-                _context.Reportes.Add(reporte);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                _logger.LogError(ex, "Error crítico al crear reporte. UsuarioId={UsuarioId}, Titulo={Titulo}", UsuarioActualId, reporte.Titulo);
+                ViewBag.ErrorGuardado = "Ocurrió un error al guardar el reporte. Intenta de nuevo.";
             }
 
             return View(reporte);
         }
 
-        // GET: /Reportes/Detalles/5
         public IActionResult Detalles(int id)
         {
-            var reporte = _context.Reportes
-                .Include(r => r.Usuario)
-                .FirstOrDefault(r => r.Id == id);
-
-            if (reporte == null) return NotFound();
-
-            var comentarios = _context.Comentarios
-                .Include(c => c.Usuario)
-                .Where(c => c.ReporteId == id)
-                .OrderBy(c => c.Fecha)
-                .ToList();
-
-            var yaVoto = _context.Validaciones
-                .Any(v => v.ReporteId == id && v.UsuarioId == UsuarioActualId);
-
-            var vm = new ReporteDetalleViewModel
+            try
             {
-                Reporte = reporte,
-                Comentarios = comentarios,
-                YaVoto = yaVoto
-            };
+                var reporte = _context.Reportes
+                    .Include(r => r.Usuario)
+                    .FirstOrDefault(r => r.Id == id);
 
-            return View(vm);
+                if (reporte == null)
+                {
+                    _logger.LogWarning("Reporte no encontrado: ID={Id}", id);
+                    return NotFound();
+                }
+
+                var comentarios = _context.Comentarios
+                    .Include(c => c.Usuario)
+                    .Where(c => c.ReporteId == id)
+                    .OrderBy(c => c.Fecha)
+                    .ToList();
+
+                var yaVoto = _context.Validaciones
+                    .Any(v => v.ReporteId == id && v.UsuarioId == UsuarioActualId);
+
+                return View(new ReporteDetalleViewModel
+                {
+                    Reporte = reporte,
+                    Comentarios = comentarios,
+                    YaVoto = yaVoto
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar detalles del reporte ID={Id}", id);
+                return RedirectToAction(nameof(Index));
+            }
         }
 
-        // POST: /Reportes/Upvote/5
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Upvote(int id)
         {
-            var reporte = _context.Reportes.FirstOrDefault(r => r.Id == id);
-            if (reporte == null) return NotFound();
-
-            var yaVoto = _context.Validaciones
-                .Any(v => v.ReporteId == id && v.UsuarioId == UsuarioActualId);
-
-            if (!yaVoto)
+            try
             {
-                _context.Validaciones.Add(new Validacion
+                var reporte = _context.Reportes.FirstOrDefault(r => r.Id == id);
+                if (reporte == null) return NotFound();
+
+                var yaVoto = _context.Validaciones
+                    .Any(v => v.ReporteId == id && v.UsuarioId == UsuarioActualId);
+
+                if (!yaVoto)
                 {
-                    ReporteId = id,
-                    UsuarioId = UsuarioActualId,
-                    FechaVoto = DateTime.Now
-                });
-                reporte.Upvotes++;
-                await _context.SaveChangesAsync();
+                    _context.Validaciones.Add(new Validacion
+                    {
+                        ReporteId = id,
+                        UsuarioId = UsuarioActualId,
+                        FechaVoto = DateTime.Now
+                    });
+                    reporte.Upvotes++;
+                    await _context.SaveChangesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al procesar upvote. ReporteId={Id}, UsuarioId={UsuarioId}", id, UsuarioActualId);
             }
 
             return RedirectToAction(nameof(Detalles), new { id });
         }
 
-        // POST: /Reportes/AgregarComentario
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AgregarComentario(int reporteId, string texto)
         {
-            if (!string.IsNullOrWhiteSpace(texto))
+            try
             {
-                _context.Comentarios.Add(new Comentario
+                if (!string.IsNullOrWhiteSpace(texto))
                 {
-                    ReporteId = reporteId,
-                    UsuarioId = UsuarioActualId,
-                    Texto = texto.Trim(),
-                    Fecha = DateTime.Now
-                });
-                await _context.SaveChangesAsync();
+                    _context.Comentarios.Add(new Comentario
+                    {
+                        ReporteId = reporteId,
+                        UsuarioId = UsuarioActualId,
+                        Texto = texto.Trim(),
+                        Fecha = DateTime.Now
+                    });
+                    await _context.SaveChangesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al agregar comentario. ReporteId={Id}, UsuarioId={UsuarioId}", reporteId, UsuarioActualId);
             }
 
             return RedirectToAction(nameof(Detalles), new { id = reporteId });

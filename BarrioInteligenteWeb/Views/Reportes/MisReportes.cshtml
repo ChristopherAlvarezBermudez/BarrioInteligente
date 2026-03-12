@@ -1,0 +1,235 @@
+@model IEnumerable<BarrioInteligenteWeb.Models.Reporte>
+@{
+    Layout = null;
+    ViewData["Title"] = "Mis Reportes";
+    string nombre = User.Identity?.Name ?? "Usuario";
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Mis Reportes — Barrio Inteligente</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/barrio.css" asp-append-version="true" />
+    <style>
+        .feed-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 16px 80px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .reporte-card {
+            background: #fff;
+            border: 1px solid #ebebeb;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,.05);
+            transition: transform .15s, box-shadow .15s;
+            text-decoration: none;
+            display: block;
+            color: inherit;
+        }
+        .reporte-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0,0,0,.1);
+        }
+        .card-img {
+            width: 100%;
+            height: 140px;
+            background: linear-gradient(135deg, #d0d0d0, #b0b0b0);
+            overflow: hidden;
+            position: relative;
+        }
+        .card-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .card-img-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+        }
+        .card-body {
+            padding: 14px;
+        }
+        .card-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+        .card-categoria {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            color: #888;
+        }
+        .card-estado {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 20px;
+            border: 1.5px solid #ccc;
+            color: #555;
+        }
+        .card-estado.pendiente { border-color: #fbbf24; color: #b45309; background: #fffbeb; }
+        .card-estado.en-proceso { border-color: #60a5fa; color: #1d4ed8; background: #eff6ff; }
+        .card-estado.resuelto { border-color: #34d399; color: #065f46; background: #ecfdf5; }
+        .card-titulo {
+            font-size: 16px;
+            font-weight: 700;
+            color: #111;
+            margin-bottom: 4px;
+            line-height: 1.3;
+        }
+        .card-desc {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.45;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .card-footer-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #f0f0f0;
+        }
+        .card-date { font-size: 11px; color: #aaa; }
+        .card-upvotes {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #555;
+        }
+        .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 60px 30px;
+            text-align: center;
+        }
+        .empty-state svg { color: #ccc; }
+        .empty-state h3 { font-size: 18px; font-weight: 700; color: #333; margin: 0; }
+        .empty-state p { font-size: 14px; color: #888; margin: 0; }
+    </style>
+</head>
+<body>
+<div class="app-screen">
+
+    <header class="app-header">
+        <span class="app-title">Mis Reportes</span>
+        <form asp-controller="Account" asp-action="Logout" method="post" style="margin:0">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn-user-icon" title="Cerrar sesión" aria-label="Cerrar sesión">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
+                </svg>
+            </button>
+        </form>
+    </header>
+
+    @if (!Model.Any())
+    {
+        <div class="empty-state">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.2" stroke="currentColor" width="72" height="72">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z"/>
+            </svg>
+            <h3>Aún no tienes reportes</h3>
+            <p>Usa el botón + en el mapa para reportar un problema en tu barrio.</p>
+            <a href="@Url.Action("Crear", "Reportes")" class="btn-primary-black" style="width:auto;padding:14px 28px;">
+                Crear primer reporte
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="feed-body">
+            @foreach (var r in Model)
+            {
+                var estadoClass = r.Estado == "Resuelto" ? "resuelto" : (r.Estado == "En Proceso" ? "en-proceso" : "pendiente");
+                var emoji = r.Categoria switch {
+                    "Bache"  => "🚧",
+                    "Basura" => "🗑️",
+                    "Luz"    => "💡",
+                    _        => "📍"
+                };
+                var horasAtras = (int)(DateTime.Now - r.Fecha).TotalHours;
+                var tiempo = horasAtras < 1 ? "Hace menos de 1h" : horasAtras == 1 ? "Hace 1h" : $"Hace {horasAtras}h";
+
+                <a href="@Url.Action("Detalles", "Reportes", new { id = r.Id })" class="reporte-card">
+                    <div class="card-img">
+                        @if (!string.IsNullOrEmpty(r.ImagenUrl))
+                        {
+                            <img src="@r.ImagenUrl" alt="@r.Titulo" />
+                        }
+                        else
+                        {
+                            <div class="card-img-placeholder">@emoji</div>
+                        }
+                    </div>
+                    <div class="card-body">
+                        <div class="card-meta">
+                            <span class="card-categoria">@r.Categoria</span>
+                            <span class="card-estado @estadoClass">@r.Estado</span>
+                        </div>
+                        <p class="card-titulo">@r.Titulo</p>
+                        <p class="card-desc">@r.Descripcion</p>
+                        <div class="card-footer-row">
+                            <span class="card-date">@tiempo</span>
+                            <span class="card-upvotes">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" width="14" height="14">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/>
+                                </svg>
+                                @r.Upvotes confirmaciones
+                            </span>
+                        </div>
+                    </div>
+                </a>
+            }
+        </div>
+    }
+
+    <nav class="bottom-nav">
+        <a href="@Url.Action("Index", "Reportes")">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z"/>
+            </svg>
+            <span>Mapa</span>
+        </a>
+        <a href="@Url.Action("MisReportes", "Reportes")" class="active">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/>
+            </svg>
+            <span>Mis Reportes</span>
+        </a>
+        <a href="@Url.Action("Perfil", "Account")">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
+            </svg>
+            <span>Perfil</span>
+        </a>
+    </nav>
+
+</div>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

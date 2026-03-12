@@ -1,0 +1,129 @@
+@model BarrioInteligenteWeb.Models.Usuario
+@{
+    Layout = null;
+    ViewData["Title"] = "Perfil";
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Perfil — Barrio Inteligente</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/barrio.css" asp-append-version="true" />
+    <style>
+        .perfil-body {
+            flex: 1;
+            padding: 32px 24px 100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        .avatar-grande {
+            width: 88px;
+            height: 88px;
+            background: #111;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+        }
+        .perfil-nombre {
+            font-size: 22px;
+            font-weight: 800;
+            color: #111;
+            margin: 0;
+            text-align: center;
+        }
+        .perfil-correo {
+            font-size: 14px;
+            color: #888;
+            margin: 0;
+        }
+        .perfil-dato {
+            width: 100%;
+            background: #f5f5f5;
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .perfil-dato label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            color: #aaa;
+        }
+        .perfil-dato span {
+            font-size: 15px;
+            color: #111;
+            font-weight: 500;
+        }
+        .divider { width: 100%; height: 1px; background: #ebebeb; }
+    </style>
+</head>
+<body>
+<div class="app-screen">
+
+    <header class="app-header">
+        <span class="app-title">Mi Perfil</span>
+        <div style="width:36px;"></div>
+    </header>
+
+    <div class="perfil-body">
+        <div class="avatar-grande">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="44" height="44">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
+            </svg>
+        </div>
+
+        <p class="perfil-nombre">@Model.NombreCompleto</p>
+        <p class="perfil-correo">@Model.Correo</p>
+
+        <div class="divider"></div>
+
+        <div class="perfil-dato" style="width:100%">
+            <label>Miembro desde</label>
+            <span>@Model.FechaRegistro.ToString("dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-DO"))</span>
+        </div>
+
+        <form asp-controller="Account" asp-action="Logout" method="post" style="width:100%;margin-top:8px;">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn-primary-black" style="background:#fff;color:#111;border:2px solid #111;">
+                Cerrar sesión
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="18" height="18">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"/>
+                </svg>
+            </button>
+        </form>
+    </div>
+
+    <nav class="bottom-nav">
+        <a href="@Url.Action("Index", "Reportes")">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c-.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z"/>
+            </svg>
+            <span>Mapa</span>
+        </a>
+        <a href="@Url.Action("MisReportes", "Reportes")">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/>
+            </svg>
+            <span>Mis Reportes</span>
+        </a>
+        <a href="@Url.Action("Perfil", "Account")" class="active">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
+            </svg>
+            <span>Perfil</span>
+        </a>
+    </nav>
+
+</div>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
