@@ -12,6 +12,7 @@ namespace BarrioInteligenteWeb.Data
         public DbSet<Reporte> Reportes { get; set; }
         public DbSet<Usuario> Usuarios { get; set; }
         public DbSet<Comentario> Comentarios { get; set; }
+        public DbSet<ComentarioLike> ComentariosLikes { get; set; }
         public DbSet<HistorialEstado> HistorialEstados { get; set; }
         public DbSet<Validacion> Validaciones { get; set; }
 
@@ -35,6 +36,23 @@ namespace BarrioInteligenteWeb.Data
                 .HasOne(v => v.Usuario)
                 .WithMany()
                 .HasForeignKey(v => v.UsuarioId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Relaciones para el sistema de Likes de Comentarios
+            modelBuilder.Entity<ComentarioLike>()
+                .HasIndex(cl => new { cl.ComentarioId, cl.UsuarioId })
+                .IsUnique();
+
+            modelBuilder.Entity<ComentarioLike>()
+                .HasOne(cl => cl.Comentario)
+                .WithMany(c => c.Likes)
+                .HasForeignKey(cl => cl.ComentarioId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ComentarioLike>()
+                .HasOne(cl => cl.Usuario)
+                .WithMany()
+                .HasForeignKey(cl => cl.UsuarioId)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }

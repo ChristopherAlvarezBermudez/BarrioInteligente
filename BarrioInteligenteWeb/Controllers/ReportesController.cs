@@ -35,6 +35,10 @@ namespace BarrioInteligenteWeb.Controllers
                     .OrderByDescending(r => r.Fecha)
                     .ToList();
                 ViewBag.UsuarioId = UsuarioActualId;
+                ViewBag.FotoPerfil = _context.Usuarios
+                    .Where(u => u.Id == UsuarioActualId)
+                    .Select(u => u.FotoPerfil)
+                    .FirstOrDefault();
                 return View(lista);
             }
             catch (Exception ex)
@@ -52,6 +56,10 @@ namespace BarrioInteligenteWeb.Controllers
                     .Where(r => r.UsuarioId == UsuarioActualId)
                     .OrderByDescending(r => r.Fecha)
                     .ToList();
+                ViewBag.FotoPerfil = _context.Usuarios
+                    .Where(u => u.Id == UsuarioActualId)
+                    .Select(u => u.FotoPerfil)
+                    .FirstOrDefault();
                 return View("MisReportes", lista);
             }
             catch (Exception ex)
@@ -61,7 +69,64 @@ namespace BarrioInteligenteWeb.Controllers
             }
         }
 
-        public IActionResult Crear() => View();
+        public IActionResult Comunidad(string filtro = "recientes", double? lat = null, double? lon = null)
+        {
+            try
+            {
+                var query = _context.Reportes
+                    .Include(r => r.Usuario)
+                    .AsEnumerable(); // Haversine
+
+                List<Reporte> lista;
+
+                if (filtro == "cercanos" && lat.HasValue && lon.HasValue)
+                {
+                    const double R = 6371; // km
+                    double latR = lat.Value * Math.PI / 180;
+                    double lonR = lon.Value * Math.PI / 180;
+
+                    lista = query
+                        .Where(r => r.Latitud != 0 || r.Longitud != 0)
+                        .OrderBy(r =>
+                        {
+                            double dLat = (r.Latitud * Math.PI / 180) - latR;
+                            double dLon = (r.Longitud * Math.PI / 180) - lonR;
+                            double a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2)
+                                     + Math.Cos(latR) * Math.Cos(r.Latitud * Math.PI / 180)
+                                     * Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+                            return 2 * R * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+                        })
+                        .ToList();
+                }
+                else
+                {
+                    lista = query
+                        .OrderByDescending(r => r.Fecha)
+                        .ToList();
+                }
+
+                ViewBag.FiltroActivo = filtro;
+                ViewBag.FotoPerfil = _context.Usuarios
+                    .Where(u => u.Id == UsuarioActualId)
+                    .Select(u => u.FotoPerfil)
+                    .FirstOrDefault();
+                return View(lista);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar Comunidad. Filtro={Filtro}", filtro);
+                return View(new List<Reporte>());
+            }
+        }
+
+        public IActionResult Crear()
+        {
+            ViewBag.FotoPerfil = _context.Usuarios
+                .Where(u => u.Id == UsuarioActualId)
+                .Select(u => u.FotoPerfil)
+                .FirstOrDefault();
+            return View();
+        }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -129,6 +194,7 @@ namespace BarrioInteligenteWeb.Controllers
 
                 var comentarios = _context.Comentarios
                     .Include(c => c.Usuario)
+                    .Include(c => c.Likes) // Estado Like
                     .Where(c => c.ReporteId == id)
                     .OrderBy(c => c.Fecha)
                     .ToList();
@@ -147,6 +213,47 @@ namespace BarrioInteligenteWeb.Controllers
             {
                 _logger.LogError(ex, "Error al cargar detalles del reporte ID={Id}", id);
                 return RedirectToAction(nameof(Index));
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleLikeComentario(int id)
+        {
+            try
+            {
+                var like = await _context.ComentariosLikes
+                    .FirstOrDefaultAsync(l => l.ComentarioId == id && l.UsuarioId == UsuarioActualId);
+
+                bool estaLikeado = false;
+
+                if (like != null)
+                {
+                    // Quitar Like
+                    _context.ComentariosLikes.Remove(like);
+                }
+                else
+                {
+                    // Dar Like
+                    like = new ComentarioLike
+                    {
+                        ComentarioId = id,
+                        UsuarioId = UsuarioActualId
+                    };
+                    _context.ComentariosLikes.Add(like);
+                    estaLikeado = true;
+                }
+
+                await _context.SaveChangesAsync();
+
+                var totalLikes = await _context.ComentariosLikes.CountAsync(l => l.ComentarioId == id);
+
+                return Json(new { success = true, estaLikeado, totalLikes });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al procesar el like del comentario ID={Id} por el usuario {UsuarioId}", id, UsuarioActualId);
+                return Json(new { success = false, message = "Error interno del servidor" });
             }
         }
 

@@ -43,10 +43,21 @@
             </svg>
         </a>
         <span class="app-title">Nuevo Reporte</span>
-        <a href="@Url.Action("Perfil", "Account")" class="btn-user-icon" aria-label="Perfil">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
-            </svg>
+        @{
+            string? fotoPerfil = ViewBag.FotoPerfil as string;
+        }
+        <a href="@Url.Action("Perfil", "Account")" class="btn-user-icon" aria-label="Perfil"
+           style="@(!string.IsNullOrEmpty(fotoPerfil) ? "padding:0;overflow:hidden;border-radius:50%;" : "")">
+            @if (!string.IsNullOrEmpty(fotoPerfil))
+            {
+                <img src="@fotoPerfil" alt="Mi perfil" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;" />
+            }
+            else
+            {
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
+                </svg>
+            }
         </a>
     </header>
 
@@ -61,7 +72,7 @@
                 </div>
             }
 
-            <!-- Adjuntar imagen -->
+            <!-- Imagen -->
             <label for="imgInput" class="img-upload-box" id="imgUploadLabel">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/>
@@ -70,7 +81,7 @@
                 <input type="file" id="imgInput" name="imagen" accept="image/*" class="hidden-input" />
             </label>
 
-            <!-- Ubicación automática + mapa picker -->
+            <!-- Ubicacion GPS -->
             <div class="location-field" id="locationField">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
@@ -80,15 +91,16 @@
                 <input type="hidden" asp-for="Ubicacion" id="Ubicacion" />
                 <input type="hidden" asp-for="Latitud" id="Latitud" value="0" />
                 <input type="hidden" asp-for="Longitud" id="Longitud" value="0" />
+                <input type="hidden" asp-for="DireccionFisica" id="DireccionFisica" />
             </div>
 
-            <!-- Mapa interactivo picker -->
+            <!-- Mapa Picker -->
             <div>
                 <div id="map-picker"></div>
                 <p class="map-picker-label" id="mapPickerHint">📍 Toca el mapa para ajustar la ubicación exacta</p>
             </div>
 
-            <!-- Categorías -->
+            <!-- Categorias -->
             <div class="categories-grid" id="categorias">
                 <button type="button" class="category-btn" data-categoria="Bache" onclick="seleccionarCategoria(this)">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor">
@@ -117,7 +129,7 @@
             </div>
             <input type="hidden" asp-for="Categoria" id="categoriaInput" />
 
-            <!-- Descripción -->
+            <!-- Descripcion -->
             <div class="desc-box">
                 <p>Descripción del reporte</p>
                 <textarea asp-for="Descripcion" rows="4" placeholder="Describe el problema con detalle. ¿Qué tan peligroso es? ¿Cuánto tiempo lleva así?" required></textarea>
@@ -154,11 +166,11 @@
             </svg>
             <span>Mis Reportes</span>
         </a>
-        <a href="@Url.Action("Perfil", "Account")">
+        <a href="@Url.Action("Comunidad", "Reportes")">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z"/>
             </svg>
-            <span>Perfil</span>
+            <span>Comunidad</span>
         </a>
     </nav>
 </div>
@@ -166,7 +178,7 @@
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    // ===== MAP PICKER =====
+    // Mapa Picker
     let pickerMap = L.map('map-picker').setView([18.4861, -69.9312], 14);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -183,13 +195,53 @@
 
     let marcador = null;
 
+    let timeoutGeocoding = null;
+
+    async function obtenerDireccion(lat, lon) {
+        try {
+            document.getElementById('ubicacionTexto').textContent = '📍 Buscando dirección...';
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`);
+            if (res.ok) {
+                const data = await res.json();
+                
+                let direccion = "";
+                if (data.address) {
+                    const calle = data.address.road || data.address.pedestrian || "";
+                    const barrio = data.address.suburb || data.address.neighbourhood || data.address.village || data.address.city_district || "";
+                    const ciudad = data.address.city || data.address.town || "";
+                    
+                    const partes = [];
+                    if (calle) partes.push(calle);
+                    if (barrio) partes.push(barrio);
+                    if (ciudad && !barrio.includes(ciudad)) partes.push(ciudad);
+                    
+                    direccion = partes.join(", ");
+                }
+                
+                if (!direccion) direccion = data.display_name;
+
+                document.getElementById('DireccionFisica').value = direccion;
+                document.getElementById('ubicacionTexto').textContent = '📍 ' + direccion;
+            } else {
+                document.getElementById('ubicacionTexto').textContent = '📍 Lat ' + lat.toFixed(5) + ', Lon ' + lon.toFixed(5);
+            }
+        } catch (error) {
+            console.error("Geocoding error", error);
+            document.getElementById('ubicacionTexto').textContent = '📍 Lat ' + lat.toFixed(5) + ', Lon ' + lon.toFixed(5);
+        }
+    }
+
     function actualizarCoordenadas(lat, lon) {
         document.getElementById('Latitud').value = lat;
         document.getElementById('Longitud').value = lon;
         document.getElementById('Ubicacion').value = 'Lat: ' + lat.toFixed(5) + ', Lon: ' + lon.toFixed(5);
-        document.getElementById('ubicacionTexto').textContent = '📍 Lat ' + lat.toFixed(5) + ', Lon ' + lon.toFixed(5);
         document.getElementById('locationField').classList.add('location-confirmed');
         document.getElementById('mapPickerHint').textContent = '✅ Ubicación confirmada. Toca otro punto para cambiar.';
+        
+        // DebounceNominatim
+        clearTimeout(timeoutGeocoding);
+        document.getElementById('ubicacionTexto').textContent = '📍 Lat ' + lat.toFixed(5) + ', Lon ' + lon.toFixed(5);
+        timeoutGeocoding = setTimeout(() => obtenerDireccion(lat, lon), 700);
     }
 
     pickerMap.on('click', function (e) {
@@ -206,13 +258,12 @@
         actualizarCoordenadas(lat, lng);
     });
 
-    // GPS automático para centrar el mapa
+    // GPS Automatico
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(function (pos) {
             const lat = pos.coords.latitude;
             const lon = pos.coords.longitude;
             pickerMap.setView([lat, lon], 16);
-            // Poner marcador inicial en la posición GPS
             marcador = L.marker([lat, lon], { icon: markerIcon, draggable: true }).addTo(pickerMap);
             marcador.on('dragend', function () {
                 const p = marcador.getLatLng();
@@ -224,7 +275,7 @@
         }, { enableHighAccuracy: true, timeout: 10000 });
     }
 
-    // ===== CATEGORÍAS =====
+    // Categorias
     function seleccionarCategoria(btn) {
         document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
@@ -233,7 +284,7 @@
             (document.getElementById('Ubicacion').value || 'zona reportada');
     }
 
-    // ===== PREVIEW IMAGEN =====
+    // Preview Imagen
     document.getElementById('imgInput').addEventListener('change', function () {
         if (this.files && this.files[0]) {
             const label = document.getElementById('imgUploadLabel');
@@ -245,7 +296,7 @@
         }
     });
 
-    // ===== VALIDACIÓN ANTES DE ENVIAR =====
+    // Validacion Form
     document.querySelector('form').addEventListener('submit', function (e) {
         if (!document.getElementById('categoriaInput').value) {
             e.preventDefault();

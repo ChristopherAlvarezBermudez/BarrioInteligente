@@ -18,6 +18,9 @@ namespace BarrioInteligenteWeb.Models
         public string Categoria { get; set; }
 
         public string Ubicacion { get; set; }
+
+        public string? DireccionFisica { get; set; }
+
         public double Latitud { get; set; }
         public double Longitud { get; set; }
         public string? ImagenUrl { get; set; }

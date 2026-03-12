@@ -1,3 +1,4 @@
+@using System.Security.Claims
 @model BarrioInteligenteWeb.Models.ReporteDetalleViewModel
 @{
     Layout = null;
@@ -20,6 +21,12 @@
         _        => "#636e72,#2d3436"
     };
     var tieneImagen = !string.IsNullOrEmpty(Model.Reporte.ImagenUrl);
+    
+    int currentUserId = 0;
+    if (User.Identity?.IsAuthenticated == true)
+    {
+        int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out currentUserId);
+    }
 }
 <!DOCTYPE html>
 <html lang="es">
@@ -75,7 +82,7 @@
 <body>
 <div class="app-screen">
 
-    <!-- Imagen de portada con overlay -->
+    <!-- Portada -->
     <div class="detail-cover">
         <a href="@Url.Action("Index", "Reportes")" class="detail-cover-back" aria-label="Volver">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="18" height="18">
@@ -85,7 +92,6 @@
 
         @if (tieneImagen)
         {
-            <!-- Ruta guardada como /uploads/guid.ext — servida directamente por Static Files -->
             <img src="@Model.Reporte.ImagenUrl" alt="@Model.Reporte.Titulo"
                  onerror="this.style.display='none';document.getElementById('imgPlaceholder').style.display='flex';" />
             <div id="imgPlaceholder"
@@ -95,7 +101,6 @@
         }
         else
         {
-            <!-- Placeholder con emoji por categoría -->
             <div style="width:100%;height:100%;background:linear-gradient(135deg,#b8c1c8 0%,#787e85 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;">
                 <span style="font-size:72px;filter:drop-shadow(0 3px 6px rgba(0,0,0,0.3));">@emoji</span>
                 <span style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.85);text-transform:uppercase;letter-spacing:1px;">@Model.Reporte.Categoria</span>
@@ -114,7 +119,7 @@
         </div>
     </div>
 
-    <!-- Cuerpo scrollable (espacio para: botón confirmar + form comentario + bottom nav) -->
+    <!-- Contenido -->
     <div class="app-body" style="padding-bottom: 200px;">
         <div class="detail-body">
             <p class="detail-descripcion">@Model.Reporte.Descripcion</p>
@@ -134,10 +139,26 @@
                             <p class="comment-user">@(comentario.Usuario?.NombreCompleto ?? "Usuario")</p>
                             <p class="comment-text">@comentario.Texto</p>
                         </div>
-                        <div class="btn-upvote" style="cursor:default;color:#ccc;">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/>
-                            </svg>
+                        
+                        @{
+                            var totalLikes = comentario.Likes?.Count ?? 0;
+                            var estaLikeado = comentario.Likes?.Any(l => l.UsuarioId == currentUserId) ?? false;
+                        }
+                        
+                        <div class="btn-upvote btn-like-comentario" data-comentario-id="@comentario.Id" style="cursor:pointer;color:@(estaLikeado ? "#e74c3c" : "#ccc");display:flex;align-items:center;gap:4px;user-select:none;">
+                            @if(estaLikeado)
+                            {
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" class="heart-icon">
+                                    <path d="m11.645 20.91-.007-.003-.022-.012a15.247 15.247 0 0 1-.383-.218 25.18 25.18 0 0 1-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0 1 12 5.052 5.5 5.5 0 0 1 16.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 0 1-4.244 3.17 15.247 15.247 0 0 1-.383.219l-.022.012-.007.004-.003.001a.752.752 0 0 1-.704 0l-.003-.001Z" />
+                                </svg>
+                            }
+                            else
+                            {
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="18" height="18" class="heart-icon">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/>
+                                </svg>
+                            }
+                            <span class="likes-count" style="font-size:12px;font-weight:600;">@totalLikes</span>
                         </div>
                     </div>
                 }
@@ -149,10 +170,10 @@
         </div>
     </div>
 
-    <!-- Zona fija sobre el bottom nav -->
+    <!-- Controles -->
     <div style="position:fixed;bottom:64px;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:#fff;z-index:150;border-top:1px solid #ebebeb;">
 
-        <!-- Formulario de comentario -->
+        <!-- Form Comentario -->
         <form asp-controller="Reportes" asp-action="AgregarComentario" method="post" class="comment-form">
             @Html.AntiForgeryToken()
             <input type="hidden" name="reporteId" value="@Model.Reporte.Id" />
@@ -164,7 +185,7 @@
             </button>
         </form>
 
-        <!-- Botón Confirmar Reporte -->
+        <!-- Boton Reporte -->
         <div style="padding:10px 18px;">
             <form asp-controller="Reportes" asp-action="Upvote" method="post">
                 @Html.AntiForgeryToken()
@@ -183,7 +204,7 @@
         </div>
     </div>
 
-    <!-- Bottom Nav -->
+    <!-- Menu -->
     <nav class="bottom-nav">
         <a href="@Url.Action("Index", "Reportes")">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
@@ -207,5 +228,65 @@
 
 </div>
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const likeButtons = document.querySelectorAll('.btn-like-comentario');
+        
+        likeButtons.forEach(btn => {
+            btn.addEventListener('click', async function () {
+                const comentarioId = this.dataset.comentarioId;
+                const url = '@Url.Action("ToggleLikeComentario", "Reportes")';
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                
+                // Animacion
+                this.style.transform = 'scale(1.2)';
+                setTimeout(() => this.style.transform = 'scale(1)', 150);
+                this.style.transition = 'transform 0.15s ease-out';
+
+                try {
+                    const formData = new FormData();
+                    formData.append('id', comentarioId);
+                    
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'RequestVerificationToken': token,
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success) {
+                            const countSpan = this.querySelector('.likes-count');
+                            countSpan.textContent = data.totalLikes;
+                            
+                            if (data.estaLikeado) {
+                                this.style.color = '#e74c3c';
+                                this.innerHTML = `
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" class="heart-icon">
+                                        <path d="m11.645 20.91-.007-.003-.022-.012a15.247 15.247 0 0 1-.383-.218 25.18 25.18 0 0 1-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0 1 12 5.052 5.5 5.5 0 0 1 16.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 0 1-4.244 3.17 15.247 15.247 0 0 1-.383.219l-.022.012-.007.004-.003.001a.752.752 0 0 1-.704 0l-.003-.001Z" />
+                                    </svg>
+                                    <span class="likes-count" style="font-size:12px;font-weight:600;">${data.totalLikes}</span>
+                                `;
+                            } else {
+                                this.style.color = '#ccc';
+                                this.innerHTML = `
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="18" height="18" class="heart-icon">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/>
+                                    </svg>
+                                    <span class="likes-count" style="font-size:12px;font-weight:600;">${data.totalLikes}</span>
+                                `;
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error al hacer toggle like:', error);
+                }
+            });
+        });
+    });
+</script>
 </body>
 </html>

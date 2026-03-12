@@ -19,5 +19,7 @@ namespace BarrioInteligenteWeb.Models
         public string Password { get; set; } // En un entorno real esto se guarda encriptado (Hash)
         
         public DateTime FechaRegistro { get; set; } = DateTime.Now;
+
+        public string? FotoPerfil { get; set; }
     }
 }

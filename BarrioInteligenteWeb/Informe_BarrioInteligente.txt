@@ -1,0 +1,41 @@
+INFORME DE ESTADO DEL PROYECTO: BARRIO INTELIGENTE WEB
+======================================================
+Fecha de análisis: 12 de Marzo de 2026
+
+1. MODELOS (Carpeta /Models)
+----------------------------
+Sí, existen las clases principales 'Reporte' y 'Usuario', además de otras entidades accesorias que soportan la lógica de negocio.
+
+- Reporte.cs: Contiene propiedades como Id, Titulo, Descripcion, Categoria, Ubicacion (texto base), DireccionFisica (texto humano legible consumido vía API), Latitud, Longitud, Fecha, Estado, Upvotes (confirmaciones) y un ImagenUrl. También define las relaciones (Foreign Keys) hacia Usuario, Validaciones, HistorialEstados y Comentarios.
+- Usuario.cs: Contiene Id, NombreCompleto, Correo, Password (hash) y un campo opcional FotoPerfil.
+- Comentario.cs y ComentarioLike.cs: Forman el sistema de interacción y feedback de los usuarios en los reportes, previniendo el spam (1 like por usuario).
+- HistorialEstado.cs: Registra los cambios de estado ("Pendiente" -> "En Proceso" -> "Resuelto") de cada reporte.
+- Validacion.cs: Sistema de "Upvotes" o confirmaciones que previene que un usuario vote dos veces por el mismo reporte.
+- ReporteDetalleViewModel.cs: ViewModel específico para unificar el reporte, sus comentarios y saber si el usuario actual ya votó, todo en una sola vista.
+
+2. CONTROLADORES (Carpeta /Controllers)
+---------------------------------------
+- AccountController.cs: Maneja toda la autenticación (Login, Registro, Cerrar Sesión) basada en Cookies de ASP.NET Core, así como la vista y edición de Perfil del usuario (incluyendo la carga física de las Fotos de Perfil).
+- ReportesController.cs: El corazón de la aplicación. Maneja el feed principal (Index), la creación de reportes (Crear) subiendo imágenes físicas al servidor, vistas detalladas de un reporte (Detalles), filtros geo-espaciales (Comunidad usando la fórmula de Haversine para distancias) y endpoints Ajax/Fetch protegidos (ToggleLikeComentario, Upvote, AgregarComentario).
+- HomeController.cs: Controlador genérico MVC por defecto (usualmente renderiza pantallas informativas como Index plano o Privacy).
+
+3. VISTAS (Carpeta /Views)
+--------------------------
+Sí, las vistas están altamente diseñadas y maquetadas. Representan una web app estilo "Mobile-First" moderna, interactiva y pulida.
+
+- /Reportes/: Contiene 'Index.cshtml' (Mapa Interactivo Leaflet con popups estilizados y control de GPS), 'Crear.cshtml' (Formulario con un sub-mapa para seleccionar el punto exacto + geocodificación inversa), 'Detalles.cshtml' (Portada de imagen, sistema de comentarios e interacciones en vivo vía Fetch) y 'Comunidad.cshtml' (Feed social en formato lista o tarjetas, filtrable por cercanía o fechas).
+- /Account/: Contiene 'Registro.cshtml', 'Login.cshtml' (Formularios de ingreso y creación de cuentas modernos) y 'Perfil.cshtml' (Vista para editar los datos personales y la foto).
+- /Shared/: Contiene '_Layout.cshtml' (La carcasa que envuelve algunas páginas y provee la estructura base HTML) y los '_ViewStart.cshtml' y '_ViewImports.cshtml'.
+
+4. BASE DE DATOS Y CONFIGURACIÓN
+--------------------------------
+- appsettings.json: Contiene la 'DefaultConnection' apuntando a una base de datos local de SQL Server bajo el nombre 'BarrioInteligenteSQL' (Server=.;Database=BarrioInteligenteSQL;Trusted_Connection=True;TrustServerCertificate=True;).
+- Program.cs: Está inyectando y configurando correctamente 'ApplicationDbContext' mediante Entity Framework Core llamando a `UseSqlServer()`. Adicionalmente, configura autenticación por Cookies, un interceptor avanzado de Serilog para escribir logs de errores físicos en el disco (/Logs/bug-report.txt), y finalmente añade opciones para proxys inversos (`UseForwardedHeaders()`), lo que permite que la app se exponga fácilmente a internet mediante Ngrok.
+
+5. ARCHIVOS EXTRA (Scripts Python)
+----------------------------------
+- "Espacio de trabajo.py": Es un script extremadamente simple y de prueba. Consiste únicamente de 3 líneas con órdenes tipo `print()`. No tiene conexión con la aplicación web.
+- "servicio_logs.py": Es una aplicación de consola en Python en base a menús. Permite crear un archivo físico CSV (registro_eventos.csv) para ingresar manualmente, leer o borrar reportes de errores y eventos de usuarios. Es un sistema de logging local independiente y manual; **no está conectado directamente a ASP.NET Core**. La app web usa Serilog de manera automática e independiente para sus fallos reales.
+
+RESUMEN GENERAL:
+El proyecto "Barrio Inteligente" es un Minimum Viable Product (MVP) virtualmente completo. Cuenta con bases de datos relacionales estables, autenticación perimetral y seguridad antifraude de votos y likes. Está diseñado con una estética Mobile de primer nivel optimizada para interacciones comunitarias, manejo nativo de imágenes en el servidor, componentes mapeados de Leaflet con OpenStreetMap, y lógicas backend avanzadas. Todo está entrelazado y operativo.

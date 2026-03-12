@@ -1,0 +1,443 @@
+@model IEnumerable<BarrioInteligenteWeb.Models.Reporte>
+@{
+    Layout = null;
+    ViewData["Title"] = "Comunidad";
+    string filtroActivo = ViewBag.FiltroActivo ?? "recientes";
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Comunidad — Barrio Inteligente</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/barrio.css" asp-append-version="true" />
+    <style>
+        .feed-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 14px 80px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        /* Filtro */
+        .filtro-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px 0;
+        }
+        .filtro-bar label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: .4px;
+            white-space: nowrap;
+        }
+        .filtro-select {
+            flex: 1;
+            padding: 9px 12px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #111;
+            background: #f5f5f5;
+            border: 2px solid transparent;
+            border-radius: 10px;
+            outline: none;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='2' stroke='%23555'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 16px;
+            padding-right: 34px;
+            transition: border-color .15s;
+        }
+        .filtro-select:focus { border-color: #111; }
+
+        /* Tarjeta */
+        .social-card {
+            background: #fff;
+            border: 1px solid #ebebeb;
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,.06);
+            transition: transform .15s, box-shadow .15s;
+        }
+        .social-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.1); }
+
+        /* Autor */
+        .author-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 14px 8px;
+        }
+        .author-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: #e0e0e0;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 700;
+            color: #555;
+        }
+        .author-avatar img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .author-info { flex: 1; min-width: 0; }
+        .author-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: #111;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .author-time { font-size: 11px; color: #aaa; }
+
+        /* Imagen */
+        .card-img-social {
+            width: 100%;
+            height: 180px;
+            overflow: hidden;
+            background: linear-gradient(135deg, #d0d0d0, #b8b8b8);
+            position: relative;
+        }
+        .card-img-social img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .card-emoji-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 52px;
+        }
+
+        /* Cuerpo */
+        .card-content {
+            padding: 12px 14px;
+        }
+        .card-tags {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 7px;
+        }
+        .tag-cat {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            color: #888;
+        }
+        .tag-estado {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 20px;
+            border: 1.5px solid #ccc;
+            color: #555;
+        }
+        .tag-estado.pendiente  { border-color: #fbbf24; color: #b45309; background: #fffbeb; }
+        .tag-estado.en-proceso { border-color: #60a5fa; color: #1d4ed8; background: #eff6ff; }
+        .tag-estado.resuelto   { border-color: #34d399; color: #065f46; background: #ecfdf5; }
+
+        .card-titulo-social {
+            font-size: 16px;
+            font-weight: 800;
+            color: #111;
+            margin-bottom: 5px;
+            line-height: 1.3;
+        }
+        .card-desc-social {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.45;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            margin-bottom: 0;
+        }
+
+        /* Pie */
+        .card-footer-social {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px 13px;
+            border-top: 1px solid #f0f0f0;
+        }
+        .card-upvotes-social {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #555;
+        }
+        .btn-ver {
+            font-size: 12px;
+            font-weight: 700;
+            color: #fff;
+            background: #111;
+            border-radius: 10px;
+            padding: 7px 16px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: background .15s;
+        }
+        .btn-ver:hover { background: #333; color: #fff; }
+
+        /* Toast GPS */
+        #geo-toast {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #111;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 10px 20px;
+            border-radius: 30px;
+            white-space: nowrap;
+            z-index: 9999;
+            display: none;
+            box-shadow: 0 4px 16px rgba(0,0,0,.3);
+        }
+
+        /* Vacio */
+        .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 60px 30px;
+            text-align: center;
+        }
+        .empty-state svg { color: #ccc; }
+        .empty-state h3 { font-size: 18px; font-weight: 700; color: #333; margin: 0; }
+        .empty-state p  { font-size: 14px; color: #888; margin: 0; }
+    </style>
+</head>
+<body>
+<div class="app-screen">
+
+    <header class="app-header">
+        <span class="app-title">Comunidad</span>
+        @{
+            string? fotoPerfil = ViewBag.FotoPerfil as string;
+        }
+        <a href="@Url.Action("Perfil", "Account")" class="btn-user-icon" title="Mi perfil" aria-label="Mi perfil"
+           style="@(!string.IsNullOrEmpty(fotoPerfil) ? "padding:0;overflow:hidden;border-radius:50%;" : "")">
+            @if (!string.IsNullOrEmpty(fotoPerfil))
+            {
+                <img src="@fotoPerfil" alt="Mi perfil" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;" />
+            }
+            else
+            {
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
+                </svg>
+            }
+        </a>
+    </header>
+
+    <!-- Filtro -->
+    <div class="filtro-bar">
+        <label for="filtroSelect">Ordenar:</label>
+        <select id="filtroSelect" class="filtro-select">
+            <option value="recientes" selected="@(filtroActivo == "recientes")">📅 Más recientes</option>
+            <option value="cercanos"  selected="@(filtroActivo == "cercanos")">📍 Más cercanos</option>
+        </select>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="empty-state">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.2" stroke="currentColor" width="72" height="72">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z"/>
+            </svg>
+            <h3>Sin reportes aún</h3>
+            <p>Sé el primero en reportar un problema en tu barrio.</p>
+            <a href="@Url.Action("Crear", "Reportes")" class="btn-primary-black" style="width:auto;padding:14px 28px;">
+                Crear reporte
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="feed-body">
+            @foreach (var r in Model)
+            {
+                var estadoClass = r.Estado == "Resuelto" ? "resuelto" : (r.Estado == "En Proceso" ? "en-proceso" : "pendiente");
+                var emoji = r.Categoria switch {
+                    "Bache"  => "🚧",
+                    "Basura" => "🗑️",
+                    "Luz"    => "💡",
+                    _        => "📍"
+                };
+                var horasAtras = (int)(DateTime.Now - r.Fecha).TotalHours;
+                var tiempo = horasAtras < 1 ? "Hace menos de 1h" :
+                             horasAtras == 1 ? "Hace 1h" :
+                             horasAtras < 24 ? $"Hace {horasAtras}h" :
+                             r.Fecha.ToString("dd MMM yyyy");
+
+                var autorNombre = r.Usuario?.NombreCompleto ?? "Usuario";
+                var autorInicial = autorNombre.Length > 0 ? autorNombre[0].ToString().ToUpper() : "?";
+
+                <div class="social-card">
+                    <!-- Autor -->
+                    <div class="author-row">
+                        <div class="author-avatar">
+                            @if (!string.IsNullOrEmpty(r.Usuario?.FotoPerfil))
+                            {
+                                <img src="@r.Usuario.FotoPerfil" alt="@autorNombre" />
+                            }
+                            else
+                            {
+                                @autorInicial
+                            }
+                        </div>
+                        <div class="author-info">
+                            <div class="author-name">@autorNombre</div>
+                            <div class="author-time">@tiempo</div>
+                        </div>
+                        <span class="tag-estado @estadoClass">@r.Estado</span>
+                    </div>
+
+                    <!-- Imagen -->
+                    <div class="card-img-social">
+                        @if (!string.IsNullOrEmpty(r.ImagenUrl))
+                        {
+                            <img src="@r.ImagenUrl" alt="@r.Titulo" />
+                        }
+                        else
+                        {
+                            <div class="card-emoji-placeholder">@emoji</div>
+                        }
+                    </div>
+
+                    <!-- Contenido -->
+                    <div class="card-content">
+                        <div class="card-tags">
+                            <span class="tag-cat">@r.Categoria</span>
+                        </div>
+                        <p class="card-titulo-social">@r.Titulo</p>
+                        <p class="card-desc-social">@r.Descripcion</p>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="card-footer-social">
+                        <span class="card-upvotes-social">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" width="14" height="14">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/>
+                            </svg>
+                            @r.Upvotes confirmaciones
+                        </span>
+                        <a href="@Url.Action("Detalles", "Reportes", new { id = r.Id })" class="btn-ver">
+                            Ver detalles
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" width="13" height="13">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    <!-- FAB -->
+    <a href="@Url.Action("Crear", "Reportes")" class="fab-fixed" aria-label="Crear reporte">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" width="26" height="26">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+        </svg>
+    </a>
+
+    <!-- Menu -->
+    <nav class="bottom-nav">
+        <a href="@Url.Action("Index", "Reportes")">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z"/>
+            </svg>
+            <span>Mapa</span>
+        </a>
+        <a href="@Url.Action("MisReportes", "Reportes")">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/>
+            </svg>
+            <span>Mis Reportes</span>
+        </a>
+        <a href="@Url.Action("Comunidad", "Reportes")" class="active">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z"/>
+            </svg>
+            <span>Comunidad</span>
+        </a>
+    </nav>
+
+    <!-- Toast geolocalización -->
+    <div id="geo-toast">📍 Obteniendo tu ubicación…</div>
+
+</div>
+
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const filtroSelect = document.getElementById('filtroSelect');
+
+    filtroSelect.addEventListener('change', function () {
+        const valor = this.value;
+
+        if (valor === 'cercanos') {
+            if (!navigator.geolocation) {
+                alert('Tu navegador no soporta geolocalización.');
+                this.value = 'recientes';
+                return;
+            }
+            document.getElementById('geo-toast').style.display = 'block';
+            navigator.geolocation.getCurrentPosition(
+                function (pos) {
+                    const lat = pos.coords.latitude;
+                    const lon = pos.coords.longitude;
+                    window.location.href = `?filtro=cercanos&lat=${lat}&lon=${lon}`;
+                },
+                function (err) {
+                    document.getElementById('geo-toast').style.display = 'none';
+                    const msg = err.code === 1
+                        ? 'Permiso de ubicación denegado. Actívalo en la configuración de tu navegador.'
+                        : 'No se pudo obtener tu ubicación. Intenta de nuevo.';
+                    alert(msg);
+                    filtroSelect.value = 'recientes';
+                },
+                { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
+            );
+        } else {
+            window.location.href = '?filtro=recientes';
+        }
+    });
+</script>
+</body>
+</html>

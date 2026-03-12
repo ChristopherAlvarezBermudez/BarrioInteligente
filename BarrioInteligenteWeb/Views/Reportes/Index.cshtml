@@ -18,7 +18,7 @@
             height: calc(100dvh - 57px - 64px);
         }
 
-        /* ---- Botón GPS personalizado Leaflet ---- */
+        /* Boton GPS */
         .leaflet-gps-btn {
             width: 34px;
             height: 34px;
@@ -60,14 +60,22 @@
 
     <header class="app-header">
         <img src="~/images/LogoBI.png" alt="Barrio Inteligente" style="max-height: 26px; width: auto; object-fit: contain;" />
-        <form asp-controller="Account" asp-action="Logout" method="post" style="margin:0">
-            @Html.AntiForgeryToken()
-            <button type="submit" class="btn-user-icon" title="Cerrar sesión" aria-label="Cerrar sesión">
+        @{
+            string? fotoPerfil = ViewBag.FotoPerfil as string;
+        }
+        <a href="@Url.Action("Perfil", "Account")" class="btn-user-icon" title="Mi perfil" aria-label="Mi perfil"
+           style="@(!string.IsNullOrEmpty(fotoPerfil) ? "padding:0;overflow:hidden;border-radius:50%;" : "")">
+            @if (!string.IsNullOrEmpty(fotoPerfil))
+            {
+                <img src="@fotoPerfil" alt="Mi perfil" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;" />
+            }
+            else
+            {
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
                 </svg>
-            </button>
-        </form>
+            }
+        </a>
     </header>
 
     <div id="mapa"></div>
@@ -92,11 +100,11 @@
             </svg>
             <span>Mis Reportes</span>
         </a>
-        <a href="@Url.Action("Perfil", "Account")">
+        <a href="@Url.Action("Comunidad", "Reportes")">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z"/>
             </svg>
-            <span>Perfil</span>
+            <span>Comunidad</span>
         </a>
     </nav>
 
@@ -114,6 +122,8 @@
             r.Upvotes,
             r.Latitud,
             r.Longitud,
+            r.DireccionFisica,
+            r.Descripcion,
             detallesUrl = Url.Action("Detalles", "Reportes", new { id = r.Id })
         }),
         new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }
@@ -139,6 +149,12 @@
 
     const emojiCategoria = { 'Bache': '🚧', 'Basura': '🗑️', 'Luz': '💡', 'Otro': '📍' };
 
+    function truncarTexto(texto, maxLength) {
+        if (!texto) return '';
+        if (texto.length <= maxLength) return texto;
+        return texto.substring(0, maxLength) + '...';
+    }
+
     reportes.forEach(r => {
         if (r.latitud === 0 && r.longitud === 0) return;
 
@@ -150,29 +166,34 @@
             iconAnchor: [17, 17]
         });
 
+        const ubicacionMostrada = r.direccionFisica || "Ubicación sin dirección";
+        const descripcionTruncada = truncarTexto(r.descripcion, 90);
+
         L.marker([r.latitud, r.longitud], { icon })
             .addTo(map)
             .bindPopup(`
-                <div style="font-family:'Inter',sans-serif;min-width:160px;">
+                <div style="font-family:'Inter',sans-serif;min-width:180px;">
                     <strong style="font-size:14px;color:#111;">${r.titulo}</strong><br>
-                    <small style="color:#777;">${r.categoria} · ${r.estado} · ✅ ${r.upvotes}</small><br>
+                    <small style="color:#777;display:block;margin-bottom:4px;">📍 ${ubicacionMostrada}</small>
+                    <small style="color:#555;display:block;margin-bottom:6px;">${descripcionTruncada}</small>
+                    <small style="color:#999;">${r.categoria} · ${r.estado} · ✅ ${r.upvotes}</small><br>
                     <a href="${r.detallesUrl}"
                        style="display:inline-block;margin-top:8px;padding:6px 12px;background:#111;color:#fff;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;">
                         Ver detalles →
                     </a>
                 </div>
-            `, { maxWidth: 220 });
+            `, { maxWidth: 240 });
     });
 
-    // ---- Centrado automático inicial (sin reportes) ----
+    // Centrado inicial GPS
     if (navigator.geolocation && reportesConCoordenadas.length === 0) {
         navigator.geolocation.getCurrentPosition(pos => {
             map.setView([pos.coords.latitude, pos.coords.longitude], 15);
         });
     }
 
-    // ---- Control GPS: Mostrar mi ubicación ----
-    let userLocationMarker = null; // punto azul reutilizable
+    // Control GPS
+    let userLocationMarker = null;
 
     const GpsControl = L.Control.extend({
         options: { position: 'topleft' },
@@ -207,7 +228,7 @@
     const gpsControl = new GpsControl();
     gpsControl.addTo(map);
 
-    // Cuando encuentra la ubicación: dibuja / actualiza el punto azul
+    // GPS encontrado
     map.on('locationfound', function (e) {
         const btn = document.querySelector('.leaflet-gps-btn');
         if (btn) { btn.classList.remove('locating'); btn.classList.add('located'); }
@@ -241,7 +262,7 @@
         `).openPopup();
     });
 
-    // Si el usuario deniega el permiso o hay error
+    // Error GPS
     map.on('locationerror', function (e) {
         const btn = document.querySelector('.leaflet-gps-btn');
         if (btn) { btn.classList.remove('locating', 'located'); }

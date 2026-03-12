@@ -12,10 +12,12 @@ namespace BarrioInteligenteWeb.Controllers
     public class AccountController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly IWebHostEnvironment _env;
 
-        public AccountController(ApplicationDbContext context)
+        public AccountController(ApplicationDbContext context, IWebHostEnvironment env)
         {
             _context = context;
+            _env = env;
         }
 
         // GET: /Account/Login
@@ -116,6 +118,41 @@ namespace BarrioInteligenteWeb.Controllers
             await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
 
             return RedirectToAction("Index", "Reportes");
+        }
+
+        // POST: /Account/SubirFoto
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Microsoft.AspNetCore.Authorization.Authorize]
+        public async Task<IActionResult> SubirFoto(IFormFile foto)
+        {
+            var id = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var usuario = _context.Usuarios.FirstOrDefault(u => u.Id == id);
+            if (usuario == null) return RedirectToAction("Login");
+
+            if (foto != null && foto.Length > 0)
+            {
+                var ext = Path.GetExtension(foto.FileName).ToLowerInvariant();
+                if (!new[] { ".jpg", ".jpeg", ".png", ".webp" }.Contains(ext))
+                {
+                    ViewBag.Error = "Solo se permiten imágenes (.jpg, .png, .webp).";
+                    return View("Perfil", usuario);
+                }
+
+                var perfilesDir = Path.Combine(_env.WebRootPath, "uploads", "perfiles");
+                Directory.CreateDirectory(perfilesDir);
+
+                var fileName = $"perfil_{id}_{Guid.NewGuid()}{ext}";
+                var filePath = Path.Combine(perfilesDir, fileName);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                    await foto.CopyToAsync(stream);
+
+                usuario.FotoPerfil = $"/uploads/perfiles/{fileName}";
+                await _context.SaveChangesAsync();
+            }
+
+            return RedirectToAction("Perfil");
         }
 
         // POST: /Account/Logout

@@ -4,6 +4,7 @@ using BarrioInteligenteWeb.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BarrioInteligenteWeb.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260312202759_AddFotoPerfilUsuario")]
+    partial class AddFotoPerfilUsuario
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -50,33 +53,6 @@ namespace BarrioInteligenteWeb.Migrations
                     b.HasIndex("UsuarioId");
 
                     b.ToTable("Comentarios");
-                });
-
-            modelBuilder.Entity("BarrioInteligenteWeb.Models.ComentarioLike", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("ComentarioId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("FechaCreacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("UsuarioId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UsuarioId");
-
-                    b.HasIndex("ComentarioId", "UsuarioId")
-                        .IsUnique();
-
-                    b.ToTable("ComentariosLikes");
                 });
 
             modelBuilder.Entity("BarrioInteligenteWeb.Models.HistorialEstado", b =>
@@ -127,9 +103,6 @@ namespace BarrioInteligenteWeb.Migrations
 
                     b.Property<string>("Descripcion")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("DireccionFisica")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Estado")
@@ -245,25 +218,6 @@ namespace BarrioInteligenteWeb.Migrations
                     b.Navigation("Usuario");
                 });
 
-            modelBuilder.Entity("BarrioInteligenteWeb.Models.ComentarioLike", b =>
-                {
-                    b.HasOne("BarrioInteligenteWeb.Models.Comentario", "Comentario")
-                        .WithMany("Likes")
-                        .HasForeignKey("ComentarioId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BarrioInteligenteWeb.Models.Usuario", "Usuario")
-                        .WithMany()
-                        .HasForeignKey("UsuarioId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Comentario");
-
-                    b.Navigation("Usuario");
-                });
-
             modelBuilder.Entity("BarrioInteligenteWeb.Models.HistorialEstado", b =>
                 {
                     b.HasOne("BarrioInteligenteWeb.Models.Reporte", "Reporte")
@@ -311,11 +265,6 @@ namespace BarrioInteligenteWeb.Migrations
                     b.Navigation("Reporte");
 
                     b.Navigation("Usuario");
-                });
-
-            modelBuilder.Entity("BarrioInteligenteWeb.Models.Comentario", b =>
-                {
-                    b.Navigation("Likes");
                 });
 #pragma warning restore 612, 618
         }
