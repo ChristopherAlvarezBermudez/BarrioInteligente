@@ -9,17 +9,23 @@ namespace BarrioInteligenteWeb.Models
         public int Id { get; set; }
         
         [Required]
-        public string NombreCompleto { get; set; }
+        public string NombreCompleto { get; set; } = default!;
         
         [Required]
         [EmailAddress]
-        public string Correo { get; set; }
+        public string Correo { get; set; } = default!;
         
         [Required]
-        public string Password { get; set; } // En un entorno real esto se guarda encriptado (Hash)
+        public string Password { get; set; } = default!; // En un entorno real esto se guarda encriptado (Hash)
         
         public DateTime FechaRegistro { get; set; } = DateTime.Now;
 
         public string? FotoPerfil { get; set; }
+
+        public bool EmailConfirmado { get; set; } = true;
+        
+        public string? CodigoVerificacion { get; set; }
+
+        public DateTime? FechaEliminacionProgramada { get; set; }
     }
 }

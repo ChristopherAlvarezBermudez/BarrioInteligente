@@ -4,6 +4,7 @@ using BarrioInteligenteWeb.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BarrioInteligenteWeb.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260313191714_AddFechaEliminacionProgramada")]
+    partial class AddFechaEliminacionProgramada
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -147,10 +150,6 @@ namespace BarrioInteligenteWeb.Migrations
 
                     b.Property<double>("Longitud")
                         .HasColumnType("float");
-
-                    b.Property<string>("TipoPost")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Titulo")
                         .IsRequired()
@@ -312,7 +311,7 @@ namespace BarrioInteligenteWeb.Migrations
             modelBuilder.Entity("BarrioInteligenteWeb.Models.Validacion", b =>
                 {
                     b.HasOne("BarrioInteligenteWeb.Models.Reporte", "Reporte")
-                        .WithMany("Validaciones")
+                        .WithMany()
                         .HasForeignKey("ReporteId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -331,11 +330,6 @@ namespace BarrioInteligenteWeb.Migrations
             modelBuilder.Entity("BarrioInteligenteWeb.Models.Comentario", b =>
                 {
                     b.Navigation("Likes");
-                });
-
-            modelBuilder.Entity("BarrioInteligenteWeb.Models.Reporte", b =>
-                {
-                    b.Navigation("Validaciones");
                 });
 #pragma warning restore 612, 618
         }

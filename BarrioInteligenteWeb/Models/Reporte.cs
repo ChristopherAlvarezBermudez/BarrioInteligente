@@ -9,15 +9,17 @@ namespace BarrioInteligenteWeb.Models
         public int Id { get; set; }
 
         [Required]
-        public string Titulo { get; set; }
+        public string Titulo { get; set; } = default!;
+
+        public string TipoPost { get; set; } = "Reporte";
 
         [Required]
-        public string Descripcion { get; set; }
+        public string Descripcion { get; set; } = default!;
 
         [Required]
-        public string Categoria { get; set; }
+        public string Categoria { get; set; } = default!;
 
-        public string Ubicacion { get; set; }
+        public string Ubicacion { get; set; } = default!;
 
         public string? DireccionFisica { get; set; }
 
@@ -32,5 +34,7 @@ namespace BarrioInteligenteWeb.Models
 
         [ForeignKey("UsuarioId")]
         public Usuario? Usuario { get; set; }
+
+        public virtual ICollection<Validacion> Validaciones { get; set; } = new List<Validacion>();
     }
 }

@@ -1,4 +1,4 @@
-/* ===== BARRIO INTELIGENTE â€” CSS personalizado ===== */
+ï»¿/* ===== BARRIO INTELIGENTE â€” CSS personalizado ===== */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 *, *::before, *::after {
@@ -534,7 +534,6 @@ html, body {
 }
 
 /* ---- BotÃ³n Confirmar Reporte ---- */
-.btn-confirmar {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -551,7 +550,6 @@ html, body {
     margin: 16px 0;
 }
 
-.btn-confirmar:hover {
     background: #111;
     color: #fff;
 }
@@ -568,51 +566,38 @@ html, body {
     --acento-rojo-sutil: rgba(217, 4, 41, 0.15);
 }
 
-/* 1. Hotbar (Bottom Navigation) - Pestaña Activa */
+/* 1. Hotbar (Bottom Navigation) - Pestaï¿½a Activa */
 .bottom-nav a.active {
     color: var(--acento-rojo) !important;
 }
 .bottom-nav a.active::after {
-    background: var(--acento-rojo) !important;
 }
 
 /* 2. Botones Principales (Reemplaza los botones negros y primarios) */
 .btn-primary-black,
 .btn-primary {
-    background-color: var(--acento-rojo) !important;
-    border-color: var(--acento-rojo) !important;
+    
     color: #fff !important;
-    border-radius: 14px !important; /* Ligeramente más redondeado */
 }
 .btn-primary-black:hover,
 .btn-primary:hover {
     background-color: var(--acento-rojo-hover) !important;
-    border-color: var(--acento-rojo-hover) !important;
     color: #fff !important;
 }
 
-/* Botón Confirmar Reporte específico (y otros outline) */
-.btn-confirmar {
-    background: var(--acento-rojo) !important;
-    border: 2px solid var(--acento-rojo) !important;
-    color: #ffffff !important;
-    border-radius: 14px !important;
+/* Botï¿½n Confirmar Reporte especï¿½fico (y otros outline) */
 }
-.btn-confirmar:hover {
-    background: var(--acento-rojo-hover) !important;
-    border-color: var(--acento-rojo-hover) !important;
 }
 
 /* 3. Inputs (Formularios) - Focus con borde rojo */
 .form-control:focus,
 .auth-field input:focus,
 .desc-box textarea:focus {
-    border-color: var(--acento-rojo) !important;
     box-shadow: 0 0 0 0.25rem var(--acento-rojo-sutil) !important;
     outline: none !important;
 }
 
-/* 4. Detalles Sutiles (Enlaces, Categoría Seleccionada, Notificaciones) */
+/* 4. Detalles Sutiles (Enlaces, Categorï¿½a Seleccionada, Notificaciones) */
 a {
     color: var(--acento-rojo);
 }
@@ -629,21 +614,17 @@ a:hover {
     text-decoration: underline !important;
 }
 
-/* Categoría seleccionada en la vista Crear */
+/* Categorï¿½a seleccionada en la vista Crear */
 .category-btn.selected {
-    border-color: var(--acento-rojo) !important;
-    background: var(--acento-rojo) !important;
     color: #fff !important;
 }
 .category-btn.selected svg {
     color: #fff !important;
 }
 
-/* Botón flotante FAB (si se usa) y Header Back Button al hacer hover */
+/* Botï¿½n flotante FAB (si se usa) y Header Back Button al hacer hover */
 .fab, .fab-fixed {
-    background: var(--acento-rojo) !important;
 }
 .btn-back:hover, .btn-user-icon:hover {
     color: var(--acento-rojo) !important;
-    border-color: var(--acento-rojo) !important;
 }

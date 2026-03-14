@@ -13,6 +13,34 @@
     <link rel="stylesheet" href="~/css/barrio.css" asp-append-version="true" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
+        .btn-heatmap {
+            position: absolute;
+            top: 75px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: #fff;
+            border: 2px solid #ff4500;
+            color: #ff4500;
+            font-weight: 700;
+            padding: 8px 18px;
+            border-radius: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-heatmap:hover {
+            background: #ff4500;
+            color: #fff;
+        }
+        .btn-heatmap.active {
+            background: #ff4500;
+            color: #fff;
+            border-color: #ff4500;
+            box-shadow: 0 4px 14px rgba(255,69,0,0.4);
+        }
+
         #mapa {
             width: 100%;
             height: calc(100dvh - 57px - 64px);
@@ -78,6 +106,7 @@
         </a>
     </header>
 
+    <button id="btnToggleHeatmap" class="btn-heatmap">🔥 Ver Mapa de Calor de Basura</button>
     <div id="mapa"></div>
 
     <!-- FAB fijo encima del bottom nav -->
@@ -112,6 +141,7 @@
 
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script>
     const reportes = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
         Model.Select(r => new {
@@ -155,10 +185,19 @@
         return texto.substring(0, maxLength) + '...';
     }
 
-    reportes.forEach(r => {
-        if (r.latitud === 0 && r.longitud === 0) return;
+    let marcadoresNormales = [];
+    let puntosCalorBasura = [];
 
-        const emoji = emojiCategoria[r.categoria] || '📍';
+    reportes.forEach(reporte => {
+        if (reporte.latitud === 0 && reporte.longitud === 0) return;
+
+        // Condición estricta para el mapa de calor (Solo Basura)
+        if (reporte.categoria === 'Basura') {
+            const intensidad = reporte.upvotes > 0 ? reporte.upvotes * 5 : 1; 
+            puntosCalorBasura.push([reporte.latitud, reporte.longitud, intensidad]);
+        }
+
+        const emoji = emojiCategoria[reporte.categoria] || '📍';
         const icon = L.divIcon({
             html: `<div style="font-size:26px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.4));line-height:1;">${emoji}</div>`,
             className: '',
@@ -166,23 +205,49 @@
             iconAnchor: [17, 17]
         });
 
-        const ubicacionMostrada = r.direccionFisica || "Ubicación sin dirección";
-        const descripcionTruncada = truncarTexto(r.descripcion, 90);
+        const ubicacionMostrada = reporte.direccionFisica || "Ubicación sin dirección";
+        const descripcionTruncada = truncarTexto(reporte.descripcion, 90);
 
-        L.marker([r.latitud, r.longitud], { icon })
-            .addTo(map)
+        const marker = L.marker([reporte.latitud, reporte.longitud], { icon })
             .bindPopup(`
                 <div style="font-family:'Inter',sans-serif;min-width:180px;">
-                    <strong style="font-size:14px;color:#111;">${r.titulo}</strong><br>
+                    <strong style="font-size:14px;color:#111;">${reporte.titulo}</strong><br>
                     <small style="color:#777;display:block;margin-bottom:4px;">📍 ${ubicacionMostrada}</small>
                     <small style="color:#555;display:block;margin-bottom:6px;">${descripcionTruncada}</small>
-                    <small style="color:#999;">${r.categoria} · ${r.estado} · ✅ ${r.upvotes}</small><br>
-                    <a href="${r.detallesUrl}"
+                    <small style="color:#999;">${reporte.categoria} · ${reporte.estado} · ✅ ${reporte.upvotes}</small><br>
+                    <a href="${reporte.detallesUrl}"
                        style="display:inline-block;margin-top:8px;padding:6px 12px;background:#111;color:#fff;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;">
                         Ver detalles →
                     </a>
                 </div>
             `, { maxWidth: 240 });
+            
+        marker.addTo(map);
+        marcadoresNormales.push(marker);
+    });
+
+    let capaCalor = L.heatLayer(puntosCalorBasura, {
+        radius: 25, 
+        blur: 15, 
+        maxZoom: 17, 
+        gradient: {0.4: 'blue', 0.6: 'lime', 0.8: 'yellow', 1.0: 'red'}
+    });
+
+    let calorActivo = false;
+    document.getElementById('btnToggleHeatmap').addEventListener('click', function() {
+        if (!calorActivo) {
+            map.addLayer(capaCalor);
+            marcadoresNormales.forEach(m => map.removeLayer(m)); // Ocultar marcadores normales
+            this.classList.add('active');
+            this.textContent = '📍 Ver Marcadores Normales';
+            calorActivo = true;
+        } else {
+            map.removeLayer(capaCalor);
+            marcadoresNormales.forEach(m => map.addLayer(m)); // Mostrar marcadores normales
+            this.classList.remove('active');
+            this.textContent = '🔥 Ver Mapa de Calor de Basura';
+            calorActivo = false;
+        }
     });
 
     // Centrado inicial GPS

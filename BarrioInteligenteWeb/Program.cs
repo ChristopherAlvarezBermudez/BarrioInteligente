@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.HttpOverrides;
 using Serilog;
 using BarrioInteligenteWeb.Data;
+using BarrioInteligenteWeb.Services;
 
 // Crear carpeta Logs si no existe
 Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "Logs"));
@@ -41,7 +42,10 @@ try
 
     builder.Services.AddControllersWithViews();
 
-    // Soporte para proxy inverso (ngrok u otro túnel)
+    // Servicio de Emails
+    builder.Services.AddScoped<IEmailService, EmailService>();
+
+    // Soporte para proxy inverso
     builder.Services.Configure<ForwardedHeadersOptions>(options =>
     {
         options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;

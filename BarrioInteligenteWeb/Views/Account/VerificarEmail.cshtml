@@ -1,0 +1,47 @@
+@{
+    Layout = null;
+    ViewData["Title"] = "Verificar Email";
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Verificar Email — Barrio Inteligente</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/barrio.css" asp-append-version="true" />
+</head>
+<body class="auth-bg">
+    <div class="auth-container">
+        <div class="auth-card">
+            <h2 class="auth-title">Verifica tu correo ✉️</h2>
+            <p class="auth-subtitle">Ingresa el código de 6 dígitos que enviamos a <b>@ViewBag.Correo</b></p>
+            
+            @if (ViewBag.Error != null)
+            {
+                <div class="alert alert-danger" style="border-radius:12px; font-size:14px; padding:10px;">
+                    @ViewBag.Error
+                </div>
+            }
+
+            <form asp-action="VerificarEmail" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="correo" value="@ViewBag.Correo" />
+                
+                <div class="form-group mb-3">
+                    <label class="form-label">Código numérico</label>
+                    <input type="text" name="codigo" class="form-control barrio-input-text" maxlength="6" pattern="\d{6}" placeholder="Ej: 123456" required style="font-size:24px; text-align:center; letter-spacing:4px; font-weight:700;" autocomplete="off" />
+                </div>
+                
+                <button type="submit" class="btn-primary-black w-100 mt-2">
+                    Confirmar Código
+                </button>
+            </form>
+            
+            <a href="@Url.Action("Login", "Account")" class="auth-link d-block text-center mt-4">
+                Volver al Login
+            </a>
+        </div>
+    </div>
+</body>
+</html>

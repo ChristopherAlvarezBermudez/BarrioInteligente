@@ -54,6 +54,10 @@ namespace BarrioInteligenteWeb.Data
                 .WithMany()
                 .HasForeignKey(cl => cl.UsuarioId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Usuario>()
+                .Property(u => u.EmailConfirmado)
+                .HasDefaultValue(true);
         }
     }
 }

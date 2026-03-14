@@ -12,10 +12,10 @@ namespace BarrioInteligenteWeb.Models
 
         // ¿Qué reporte recibió el upvote?
         public int ReporteId { get; set; }
-        public Reporte Reporte { get; set; }
+        public Reporte Reporte { get; set; } = default!;
 
         // ¿Qué usuario dio el upvote?
         public int UsuarioId { get; set; }
-        public Usuario Usuario { get; set; }
+        public Usuario Usuario { get; set; } = default!;
     }
 }

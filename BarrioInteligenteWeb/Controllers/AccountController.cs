@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using BarrioInteligenteWeb.Data;
 using BarrioInteligenteWeb.Models;
+using BarrioInteligenteWeb.Services;
 
 namespace BarrioInteligenteWeb.Controllers
 {
@@ -13,11 +14,13 @@ namespace BarrioInteligenteWeb.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _env;
+        private readonly IEmailService _emailService;
 
-        public AccountController(ApplicationDbContext context, IWebHostEnvironment env)
+        public AccountController(ApplicationDbContext context, IWebHostEnvironment env, IEmailService emailService)
         {
             _context = context;
             _env = env;
+            _emailService = emailService;
         }
 
         // GET: /Account/Login
@@ -26,6 +29,11 @@ namespace BarrioInteligenteWeb.Controllers
             if (User.Identity?.IsAuthenticated == true)
                 return RedirectToAction("Index", "Reportes");
 
+            if (TempData["LoginMessage"] != null)
+            {
+                ViewBag.LoginMessage = TempData["LoginMessage"].ToString();
+            }
+
             ViewBag.ReturnUrl = returnUrl;
             return View();
         }
@@ -33,6 +41,16 @@ namespace BarrioInteligenteWeb.Controllers
         // GET: /Account/Perfil
         [Microsoft.AspNetCore.Authorization.Authorize]
         public IActionResult Perfil()
+        {
+            var id = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var usuario = _context.Usuarios.FirstOrDefault(u => u.Id == id);
+            if (usuario == null) return RedirectToAction("Login");
+            return View(usuario);
+        }
+
+        // GET: /Account/EditarPerfil
+        [Microsoft.AspNetCore.Authorization.Authorize]
+        public IActionResult EditarPerfil()
         {
             var id = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var usuario = _context.Usuarios.FirstOrDefault(u => u.Id == id);
@@ -54,6 +72,37 @@ namespace BarrioInteligenteWeb.Controllers
                 ViewBag.Error = "Correo o contraseña incorrectos.";
                 ViewBag.ReturnUrl = returnUrl;
                 return View();
+            }
+
+            if (usuario.FechaEliminacionProgramada.HasValue)
+            {
+                if (usuario.FechaEliminacionProgramada.Value <= DateTime.Now)
+                {
+                    if (!string.IsNullOrEmpty(usuario.FotoPerfil))
+                    {
+                        var oldFilePath = Path.Combine(_env.WebRootPath, usuario.FotoPerfil.TrimStart('/'));
+                        if (System.IO.File.Exists(oldFilePath))
+                        {
+                            System.IO.File.Delete(oldFilePath);
+                        }
+                    }
+                    _context.Usuarios.Remove(usuario);
+                    await _context.SaveChangesAsync();
+                    
+                    ViewBag.Error = "Esta cuenta ya no existe.";
+                    return View();
+                }
+                else
+                {
+                    TempData["UsuarioIdReactivar"] = usuario.Id;
+                    return RedirectToAction("ReactivarCuenta");
+                }
+            }
+
+            if (!usuario.EmailConfirmado)
+            {
+                TempData["CorreoAConfirmar"] = usuario.Correo;
+                return RedirectToAction("VerificarEmail");
             }
 
             var claims = new List<Claim>
@@ -86,38 +135,85 @@ namespace BarrioInteligenteWeb.Controllers
         // POST: /Account/Registro
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Registro(string nombreCompleto, string correo, string password)
+        public async Task<IActionResult> Registro(string nombreCompleto, string correo, string password, string confirmPassword)
         {
+            if (password != confirmPassword)
+            {
+                ViewBag.Error = "Las contraseñas no coinciden.";
+                return View();
+            }
+
             if (_context.Usuarios.Any(u => u.Correo == correo))
             {
                 ViewBag.Error = "Ya existe una cuenta con ese correo.";
                 return View();
             }
 
+            var codigo = new Random().Next(100000, 999999).ToString();
             var usuario = new Usuario
             {
                 NombreCompleto = nombreCompleto,
                 Correo = correo,
                 Password = HashPassword(password),
-                FechaRegistro = DateTime.Now
+                FechaRegistro = DateTime.Now,
+                EmailConfirmado = false,
+                CodigoVerificacion = codigo
             };
 
             _context.Usuarios.Add(usuario);
             await _context.SaveChangesAsync();
 
-            var claims = new List<Claim>
+            var asunto = "Verifica tu cuenta - Barrio Inteligente";
+            var cuerpo = $"<h3>¡Hola {nombreCompleto}!</h3><p>Tu código de verificación es: <b>{codigo}</b></p>";
+            await _emailService.EnviarAsync(correo, asunto, cuerpo);
+
+            TempData["CorreoAConfirmar"] = correo;
+            return RedirectToAction("VerificarEmail");
+        }
+
+        // GET: /Account/VerificarEmail
+        public IActionResult VerificarEmail(string? correo = null)
+        {
+            var correoTemp = TempData["CorreoAConfirmar"]?.ToString() ?? correo;
+            if (string.IsNullOrEmpty(correoTemp))
+                return RedirectToAction("Login");
+
+            ViewBag.Correo = correoTemp;
+            return View();
+        }
+
+        // POST: /Account/VerificarEmail
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> VerificarEmail(string correo, string codigo)
+        {
+            var usuario = _context.Usuarios.FirstOrDefault(u => u.Correo == correo);
+            if (usuario == null) return RedirectToAction("Login");
+
+            if (usuario.CodigoVerificacion == codigo)
             {
-                new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
-                new Claim(ClaimTypes.Name, usuario.NombreCompleto),
-                new Claim(ClaimTypes.Email, usuario.Correo)
-            };
+                usuario.EmailConfirmado = true;
+                usuario.CodigoVerificacion = null;
+                await _context.SaveChangesAsync();
 
-            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-            var principal = new ClaimsPrincipal(identity);
+                var claims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
+                    new Claim(ClaimTypes.Name, usuario.NombreCompleto),
+                    new Claim(ClaimTypes.Email, usuario.Correo)
+                };
 
-            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+                var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                var principal = new ClaimsPrincipal(identity);
 
-            return RedirectToAction("Index", "Reportes");
+                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+
+                return RedirectToAction("Index", "Reportes");
+            }
+
+            ViewBag.Error = "Código incorrecto. Intenta de nuevo.";
+            ViewBag.Correo = correo;
+            return View();
         }
 
         // POST: /Account/SubirFoto
@@ -139,6 +235,15 @@ namespace BarrioInteligenteWeb.Controllers
                     return View("Perfil", usuario);
                 }
 
+                if (!string.IsNullOrEmpty(usuario.FotoPerfil))
+                {
+                    var oldFilePath = Path.Combine(_env.WebRootPath, usuario.FotoPerfil.TrimStart('/'));
+                    if (System.IO.File.Exists(oldFilePath))
+                    {
+                        System.IO.File.Delete(oldFilePath);
+                    }
+                }
+
                 var perfilesDir = Path.Combine(_env.WebRootPath, "uploads", "perfiles");
                 Directory.CreateDirectory(perfilesDir);
 
@@ -155,6 +260,85 @@ namespace BarrioInteligenteWeb.Controllers
             return RedirectToAction("Perfil");
         }
 
+        // POST: /Account/ProgramarEliminacion
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Microsoft.AspNetCore.Authorization.Authorize]
+        public async Task<IActionResult> ProgramarEliminacion(string passwordActual)
+        {
+            var id = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var usuario = _context.Usuarios.FirstOrDefault(u => u.Id == id);
+            if (usuario == null) return RedirectToAction("Login");
+
+            if (HashPassword(passwordActual) != usuario.Password)
+            {
+                ViewBag.Error = "La contraseña actual es incorrecta.";
+                return View("Perfil", usuario);
+            }
+
+            usuario.FechaEliminacionProgramada = DateTime.Now.AddHours(24);
+            await _context.SaveChangesAsync();
+
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            TempData["LoginMessage"] = "Tu cuenta ha sido programada para eliminación y dejará de existir en 24 horas.";
+            return RedirectToAction("Login", "Account");
+        }
+
+        // GET: /Account/ReactivarCuenta
+        public IActionResult ReactivarCuenta()
+        {
+            if (TempData["UsuarioIdReactivar"] == null)
+            {
+                return RedirectToAction("Login");
+            }
+            
+            var id = (int)TempData["UsuarioIdReactivar"];
+            var usuario = _context.Usuarios.FirstOrDefault(u => u.Id == id);
+
+            if (usuario == null || !usuario.FechaEliminacionProgramada.HasValue)
+            {
+                return RedirectToAction("Login");
+            }
+
+            ViewBag.FechaEliminacion = usuario.FechaEliminacionProgramada.Value.ToString("o");
+            ViewBag.UsuarioId = id;
+            TempData.Keep("UsuarioIdReactivar");
+            
+            return View();
+        }
+
+        // POST: /Account/ReactivarCuenta
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ReactivarCuenta(int usuarioId, string password)
+        {
+            var usuario = _context.Usuarios.FirstOrDefault(u => u.Id == usuarioId);
+            if (usuario == null) return RedirectToAction("Login");
+
+            if (HashPassword(password) != usuario.Password)
+            {
+                ViewBag.Error = "Contraseña incorrecta. Intenta de nuevo.";
+                ViewBag.FechaEliminacion = usuario.FechaEliminacionProgramada?.ToString("o");
+                ViewBag.UsuarioId = usuarioId;
+                TempData.Keep("UsuarioIdReactivar");
+                return View();
+            }
+
+            usuario.FechaEliminacionProgramada = null;
+            await _context.SaveChangesAsync();
+
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
+                new Claim(ClaimTypes.Name, usuario.NombreCompleto),
+                new Claim(ClaimTypes.Email, usuario.Correo)
+            };
+            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
+
+            return RedirectToAction("Perfil", "Account");
+        }
+
         // POST: /Account/Logout
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -162,6 +346,125 @@ namespace BarrioInteligenteWeb.Controllers
         {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return RedirectToAction("Login", "Account");
+        }
+
+        // POST: /Account/SolicitarEdicionPerfil
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Microsoft.AspNetCore.Authorization.Authorize]
+        public async Task<IActionResult> SolicitarEdicionPerfil(string nuevoNombre, string nuevoCorreo, string? nuevaPassword, string? confirmarNuevaPassword, string passwordActual)
+        {
+            var id = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var usuario = _context.Usuarios.FirstOrDefault(u => u.Id == id);
+            if (usuario == null) return RedirectToAction("Login");
+
+            if (HashPassword(passwordActual) != usuario.Password)
+            {
+                ViewBag.Error = "La contraseña actual es incorrecta.";
+                return View("Perfil", usuario);
+            }
+
+            if (!string.IsNullOrEmpty(nuevaPassword) && nuevaPassword != confirmarNuevaPassword)
+            {
+                ViewBag.Error = "Las nuevas contraseñas no coinciden.";
+                return View("Perfil", usuario);
+            }
+
+            var codigo = new Random().Next(100000, 999999).ToString();
+            usuario.CodigoVerificacion = codigo;
+            await _context.SaveChangesAsync();
+
+            var asunto = "Confirma los cambios en tu perfil - Barrio Inteligente";
+            var cuerpo = $"<h3>¡Hola {usuario.NombreCompleto}!</h3><p>Alguien intentó modificar tu perfil. Tu código de autorización es: <b>{codigo}</b></p>";
+            await _emailService.EnviarAsync(usuario.Correo, asunto, cuerpo);
+
+            TempData["EditNombre"] = nuevoNombre;
+            TempData["EditCorreo"] = nuevoCorreo;
+            if (!string.IsNullOrEmpty(nuevaPassword)) TempData["EditPassword"] = nuevaPassword;
+
+            return RedirectToAction("ConfirmarEdicion");
+        }
+
+        // GET: /Account/ConfirmarEdicion
+        [Microsoft.AspNetCore.Authorization.Authorize]
+        public IActionResult ConfirmarEdicion()
+        {
+            var nombre = TempData["EditNombre"]?.ToString();
+            var correo = TempData["EditCorreo"]?.ToString();
+
+            if (nombre == null || correo == null)
+            {
+                return RedirectToAction("Perfil"); 
+            }
+
+            ViewBag.EditNombre = nombre;
+            ViewBag.EditCorreo = correo;
+            ViewBag.EditPassword = TempData["EditPassword"]?.ToString();
+
+            // Keep TempData valid for the POST request
+            TempData.Keep("EditNombre");
+            TempData.Keep("EditCorreo");
+            TempData.Keep("EditPassword");
+
+            return View();
+        }
+
+        // POST: /Account/ConfirmarEdicion
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Microsoft.AspNetCore.Authorization.Authorize]
+        public async Task<IActionResult> ConfirmarEdicion(string codigo, string editNombre, string editCorreo, string? editPassword)
+        {
+            var id = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var usuario = _context.Usuarios.FirstOrDefault(u => u.Id == id);
+            if (usuario == null) return RedirectToAction("Login");
+
+            if (usuario.CodigoVerificacion != codigo)
+            {
+                ViewBag.Error = "El código ingresado es incorrecto.";
+                ViewBag.EditNombre = editNombre;
+                ViewBag.EditCorreo = editCorreo;
+                ViewBag.EditPassword = editPassword;
+                return View();
+            }
+
+            bool requireRelogin = false;
+
+            if (usuario.Correo != editCorreo)
+            {
+                usuario.Correo = editCorreo;
+                requireRelogin = true;
+            }
+
+            if (!string.IsNullOrEmpty(editPassword))
+            {
+                usuario.Password = HashPassword(editPassword);
+                requireRelogin = true;
+            }
+
+            usuario.NombreCompleto = editNombre;
+            usuario.CodigoVerificacion = null;
+            await _context.SaveChangesAsync();
+
+            if (requireRelogin)
+            {
+                await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                TempData["LoginMessage"] = "Tus credenciales cambiaron. Por favor, inicia sesión de nuevo.";
+                return RedirectToAction("Login");
+            }
+            else
+            {
+                var claims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
+                    new Claim(ClaimTypes.Name, usuario.NombreCompleto),
+                    new Claim(ClaimTypes.Email, usuario.Correo)
+                };
+                var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
+
+                return RedirectToAction("Perfil");
+            }
         }
 
         private static string HashPassword(string password)

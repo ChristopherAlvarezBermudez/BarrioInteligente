@@ -180,10 +180,7 @@
 
         /* Pie */
         .card-footer-social {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px 14px 13px;
+            padding: 12px 14px 14px;
             border-top: 1px solid #f0f0f0;
         }
         .card-upvotes-social {
@@ -195,19 +192,43 @@
             color: #555;
         }
         .btn-ver {
-            font-size: 12px;
-            font-weight: 700;
-            color: #fff;
-            background: #111;
-            border-radius: 10px;
-            padding: 7px 16px;
-            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 20px;
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 5px;
-            transition: background .15s;
         }
-        .btn-ver:hover { background: #333; color: #fff; }
+
+        /* Botón Confirmar (Like) */
+        .btn-confirmar {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 20px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: #6c757d;
+        }
+        .btn-confirmar svg {
+            color: #6c757d;
+            transition: all 0.2s ease;
+        }
+        
+        /* Estado Confirmado Activo */
+        .btn-confirmar.confirmado-activo {
+            color: #dc2626 !important; /* Texto rojo */
+            border-color: #fca5a5 !important; /* Borde rojo claro */
+            background-color: #ffffff !important; /* Fondo blanco */
+        }
+        .btn-confirmar.confirmado-activo svg {
+            color: #dc2626 !important;
+        }
 
         /* Toast GPS */
         #geo-toast {
@@ -266,6 +287,16 @@
         </a>
     </header>
 
+    <!-- Pestañas Tipo Post -->
+    <ul class="nav nav-pills w-100 justify-content-center bg-white border-bottom py-2" style="font-weight: 700; gap: 8px;">
+        <li class="nav-item flex-grow-1" style="max-width: 50%;">
+            <a class="nav-link @(ViewBag.TipoActual == "Reporte" || string.IsNullOrEmpty((string)ViewBag.TipoActual) ? "active bg-dark text-white rounded-4 mx-2" : "text-dark mx-2")" style="text-align: center;" href="@Url.Action("Comunidad", new { tipo = "Reporte", filtro = filtroActivo })">🚨 Reportes</a>
+        </li>
+        <li class="nav-item flex-grow-1" style="max-width: 50%;">
+            <a class="nav-link @(ViewBag.TipoActual == "Consulta" ? "active bg-dark text-white rounded-4 mx-2" : "text-dark mx-2")" style="text-align: center;" href="@Url.Action("Comunidad", new { tipo = "Consulta", filtro = filtroActivo })">🏘️ Consultas</a>
+        </li>
+    </ul>
+
     <!-- Filtro -->
     <div class="filtro-bar">
         <label for="filtroSelect">Ordenar:</label>
@@ -277,15 +308,19 @@
 
     @if (!Model.Any())
     {
+        bool esConsulta = ViewBag.TipoActual == "Consulta";
         <div class="empty-state">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.2" stroke="currentColor" width="72" height="72">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z"/>
             </svg>
-            <h3>Sin reportes aún</h3>
-            <p>Sé el primero en reportar un problema en tu barrio.</p>
-            <a href="@Url.Action("Crear", "Reportes")" class="btn-primary-black" style="width:auto;padding:14px 28px;">
-                Crear reporte
-            </a>
+            <h3>@(esConsulta ? "Sin consultas aún" : "Sin reportes aún")</h3>
+            <p>@(esConsulta ? "Haz preguntas sobre tu vecindario o averigua sobre una nueva zona." : "Sé el primero en reportar un problema en tu barrio.")</p>
+            @if (!esConsulta)
+            {
+                <a href="@Url.Action("Crear", "Reportes")" class="btn-primary-black" style="width:auto;padding:14px 28px;">
+                    Crear reporte
+                </a>
+            }
         </div>
     }
     else
@@ -304,12 +339,17 @@
                 var tiempo = horasAtras < 1 ? "Hace menos de 1h" :
                              horasAtras == 1 ? "Hace 1h" :
                              horasAtras < 24 ? $"Hace {horasAtras}h" :
-                             r.Fecha.ToString("dd MMM yyyy");
+                             r.Fecha.ToString("dd MMM yyyy 'a las' hh:mm tt");
 
                 var autorNombre = r.Usuario?.NombreCompleto ?? "Usuario";
                 var autorInicial = autorNombre.Length > 0 ? autorNombre[0].ToString().ToUpper() : "?";
 
-                <div class="social-card">
+                // Validacion
+                bool yaConfirmo = ViewBag.UsuarioId != null && r.Validaciones?.Any(v => v.UsuarioId == ViewBag.UsuarioId) == true;
+                bool esPrioridad = r.Upvotes >= 5;
+                string bordeClase = esPrioridad ? "border-danger" : "";
+
+                <div class="social-card @bordeClase" style="@(esPrioridad ? "border-width: 2px;" : "")">
                     <!-- Autor -->
                     <div class="author-row">
                         <div class="author-avatar">
@@ -326,6 +366,10 @@
                             <div class="author-name">@autorNombre</div>
                             <div class="author-time">@tiempo</div>
                         </div>
+                        @if (esPrioridad)
+                        {
+                            <span class="tag-estado" style="background:#fef2f2; color:#dc2626; border-color:#fca5a5; margin-right: 6px;">🔥 Prioridad Alta</span>
+                        }
                         <span class="tag-estado @estadoClass">@r.Estado</span>
                     </div>
 
@@ -344,7 +388,14 @@
                     <!-- Contenido -->
                     <div class="card-content">
                         <div class="card-tags">
-                            <span class="tag-cat">@r.Categoria</span>
+                            @if (r.TipoPost == "Consulta")
+                            {
+                                <span class="tag-cat" style="color: #4f46e5; background: #e0e7ff; padding: 4px 12px; border-radius: 20px; border: 1.5px solid #a5b4fc;">🏘️ CONSULTA VECINAL</span>
+                            }
+                            else
+                            {
+                                <span class="tag-cat">@r.Categoria</span>
+                            }
                         </div>
                         <p class="card-titulo-social">@r.Titulo</p>
                         <p class="card-desc-social">@r.Descripcion</p>
@@ -352,18 +403,22 @@
 
                     <!-- Footer -->
                     <div class="card-footer-social">
-                        <span class="card-upvotes-social">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" width="14" height="14">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/>
-                            </svg>
-                            @r.Upvotes confirmaciones
-                        </span>
-                        <a href="@Url.Action("Detalles", "Reportes", new { id = r.Id })" class="btn-ver">
-                            Ver detalles
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" width="13" height="13">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/>
-                            </svg>
-                        </a>
+                        <div class="d-flex gap-2 w-100 mt-3" style="height: 45px;">
+                            <button type="button" 
+                                    class="btn btn-outline-secondary flex-grow-1 d-flex justify-content-center align-items-center gap-2 btn-confirmar" 
+                                    data-reporte-id="@r.Id" 
+                                    id="btn-confirmar-@r.Id">
+                                <i class="bi @(yaConfirmo ? "bi-heart-fill text-danger" : "bi-heart") icono-confirmar"></i>
+                                <span class="texto-contador @(yaConfirmo ? "text-danger fw-bold" : "")">
+                                    <span class="conteo-confirmaciones">@r.Upvotes</span> confirmaciones
+                                </span>
+                            </button>
+
+                            <a href="@Url.Action("Detalles", "Reportes", new { id = r.Id })" 
+                               class="btn btn-dark d-flex justify-content-center align-items-center px-4 btn-ver">
+                                Ver detalles <i class="bi bi-arrow-right ms-2"></i>
+                            </a>
+                        </div>
                     </div>
                 </div>
             }
@@ -399,6 +454,9 @@
         </a>
     </nav>
 
+    <!-- AntiForgeryToken global para Ajax -->
+    @Html.AntiForgeryToken()
+
     <!-- Toast geolocalización -->
     <div id="geo-toast">📍 Obteniendo tu ubicación…</div>
 
@@ -422,7 +480,7 @@
                 function (pos) {
                     const lat = pos.coords.latitude;
                     const lon = pos.coords.longitude;
-                    window.location.href = `?filtro=cercanos&lat=${lat}&lon=${lon}`;
+                    window.location.href = `?filtro=cercanos&lat=${lat}&lon=${lon}&tipo=@(ViewBag.TipoActual ?? "Reporte")`;
                 },
                 function (err) {
                     document.getElementById('geo-toast').style.display = 'none';
@@ -435,8 +493,83 @@
                 { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
             );
         } else {
-            window.location.href = '?filtro=recientes';
+            window.location.href = '?filtro=recientes&tipo=@(ViewBag.TipoActual ?? "Reporte")';
         }
+    });
+
+    // Validaciones / Confirmaciones (AJAX)
+    document.querySelectorAll('.btn-confirmar').forEach(btn => {
+        btn.addEventListener('click', async function (e) {
+            e.preventDefault();
+            const reporteId = this.getAttribute('data-reporte-id');
+            const tokenElement = document.querySelector('input[name="__RequestVerificationToken"]');
+            const token = tokenElement ? tokenElement.value : '';
+
+            try {
+                const formData = new FormData();
+                formData.append('id', reporteId);
+
+                const response = await fetch('@Url.Action("ConfirmarReporte", "Reportes")', {
+                    method: 'POST',
+                    headers: {
+                        'RequestVerificationToken': token
+                    },
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        // Actualizar conteo
+                        const conteoSpan = this.querySelector('.conteo-confirmaciones');
+                        conteoSpan.textContent = data.nuevoConteo;
+
+                        // Actualizar icono y color del texto (sin afectar el fondo del botón)
+                        const icono = this.querySelector('.icono-confirmar');
+                        const textoContador = this.querySelector('.texto-contador');
+
+                        if (data.estaConfirmado) {
+                            // Cambiar a corazon pintado y texto rojo
+                            icono.classList.remove('bi-heart');
+                            icono.classList.add('bi-heart-fill', 'text-danger');
+                            
+                            textoContador.classList.add('text-danger', 'fw-bold');
+                        } else {
+                            // Volver a corazon vacio y texto gris
+                            icono.classList.remove('bi-heart-fill', 'text-danger');
+                            icono.classList.add('bi-heart');
+                            
+                            textoContador.classList.remove('text-danger', 'fw-bold');
+                        }
+
+                        // Actualizar tarjeta a Prioridad Alta si llega a 5
+                        const card = this.closest('.social-card');
+                        if (data.nuevoConteo >= 5 && !card.classList.contains('border-danger')) {
+                            card.classList.add('border-danger');
+                            card.style.borderWidth = '2px';
+                            // Crear el badge si no existe
+                            const authorRow = card.querySelector('.author-row');
+                            if (!authorRow.querySelector('.tag-estado[style*="background:#fef2f2"]')) {
+                                const badge = document.createElement('span');
+                                badge.className = 'tag-estado';
+                                badge.style.cssText = 'background:#fef2f2; color:#dc2626; border-color:#fca5a5; margin-right: 6px;';
+                                badge.textContent = '🔥 Prioridad Alta';
+                                authorRow.insertBefore(badge, authorRow.lastElementChild);
+                            }
+                        } else if (data.nuevoConteo < 5 && card.classList.contains('border-danger')) {
+                            card.classList.remove('border-danger');
+                            card.style.borderWidth = '';
+                            const badge = authorRow.querySelector('.tag-estado[style*="background:#fef2f2"]');
+                            if (badge) badge.remove();
+                        }
+                    } else {
+                        alert(data.message || 'Error al procesar la confirmación.');
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        });
     });
 </script>
 </body>

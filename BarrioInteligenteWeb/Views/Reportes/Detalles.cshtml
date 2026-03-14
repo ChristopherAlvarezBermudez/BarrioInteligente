@@ -187,20 +187,17 @@
 
         <!-- Boton Reporte -->
         <div style="padding:10px 18px;">
-            <form asp-controller="Reportes" asp-action="Upvote" method="post">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="id" value="@Model.Reporte.Id" />
-                <button type="submit" class="btn-confirmar" @(Model.YaVoto ? "disabled" : "") style="@(Model.YaVoto ? "opacity:0.5;cursor:not-allowed;" : "")">
-                    @if (Model.YaVoto)
-                    {
-                        <span>✅ Confirmado (@Model.Reporte.Upvotes)</span>
-                    }
-                    else
-                    {
-                        <span>Confirmar Reporte (@Model.Reporte.Upvotes)</span>
-                    }
-                </button>
-            </form>
+            <button type="button" 
+                    id="btn-confirmar-detalle"
+                    class="btn btn-outline-secondary w-100 d-flex justify-content-center align-items-center gap-2" 
+                    data-reporte-id="@Model.Reporte.Id"
+                    style="height: 48px; border-radius: 12px; font-weight: 600; font-size: 15px; background-color: #ffffff;">
+                <i class="bi @(Model.YaVoto ? "bi-heart-fill text-danger" : "bi-heart")"></i>
+                <span class="texto-contador @(Model.YaVoto ? "text-danger fw-bold" : "")" style="color:#555">
+                    <span class="texto-estado">@(Model.YaVoto ? "Confirmado" : "Confirmar Reporte")</span> 
+                    (<span class="conteo">@Model.Reporte.Upvotes</span>)
+                </span>
+            </button>
         </div>
     </div>
 
@@ -286,6 +283,65 @@
                 }
             });
         });
+
+        // Script para confirmar reporte en Detalles (AJAX similar a Comunidad)
+        const btnConfirmarDetalle = document.getElementById('btn-confirmar-detalle');
+        if (btnConfirmarDetalle) {
+            btnConfirmarDetalle.addEventListener('click', async function(e) {
+                e.preventDefault();
+                const reporteId = this.getAttribute('data-reporte-id');
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+                // Animacion sutil
+                this.style.transform = 'scale(0.98)';
+                setTimeout(() => this.style.transform = 'scale(1)', 150);
+                this.style.transition = 'transform 0.15s ease-out';
+
+                try {
+                    const formData = new FormData();
+                    formData.append('id', reporteId);
+
+                    const response = await fetch('@Url.Action("ConfirmarReporte", "Reportes")', {
+                        method: 'POST',
+                        headers: {
+                            'RequestVerificationToken': token,
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: formData
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success) {
+                            const icono = this.querySelector('i.bi');
+                            const textoContador = this.querySelector('.texto-contador');
+                            const spanConteo = this.querySelector('.conteo');
+                            const textoEstado = this.querySelector('.texto-estado');
+
+                            spanConteo.textContent = data.nuevoConteo;
+
+                            if (data.estaConfirmado) {
+                                // Cambiar a estado activo
+                                icono.classList.remove('bi-heart');
+                                icono.classList.add('bi-heart-fill', 'text-danger');
+                                textoContador.classList.add('text-danger', 'fw-bold');
+                                textoEstado.textContent = 'Confirmado';
+                            } else {
+                                // Cambiar a estado inactivo
+                                icono.classList.remove('bi-heart-fill', 'text-danger');
+                                icono.classList.add('bi-heart');
+                                textoContador.classList.remove('text-danger', 'fw-bold');
+                                textoEstado.textContent = 'Confirmar Reporte';
+                            }
+                        } else {
+                            alert(data.message || 'Error al procesar la confirmación.');
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error al confirmar reporte:', error);
+                }
+            });
+        }
     });
 </script>
 </body>

@@ -72,6 +72,17 @@
                 </div>
             }
 
+            <!-- Tipo de Post -->
+            <div class="mb-4 d-flex justify-content-center">
+                <div class="btn-group w-100" role="group">
+                    <input type="radio" class="btn-check" asp-for="TipoPost" id="tipoReporte" value="Reporte" autocomplete="off" checked>
+                    <label class="btn btn-outline-dark fw-bold" for="tipoReporte" style="border-radius: 12px 0 0 12px;">🚨 Reporte Urbano</label>
+
+                    <input type="radio" class="btn-check" asp-for="TipoPost" id="tipoConsulta" value="Consulta" autocomplete="off">
+                    <label class="btn btn-outline-dark fw-bold" for="tipoConsulta" style="border-radius: 0 12px 12px 0;">🏘️ Consulta Vecinal</label>
+                </div>
+            </div>
+
             <!-- Imagen -->
             <label for="imgInput" class="img-upload-box" id="imgUploadLabel">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -131,8 +142,8 @@
 
             <!-- Descripcion -->
             <div class="desc-box">
-                <p>Descripción del reporte</p>
-                <textarea asp-for="Descripcion" rows="4" placeholder="Describe el problema con detalle. ¿Qué tan peligroso es? ¿Cuánto tiempo lleva así?" required></textarea>
+                <p id="lblDescripcion">Descripción del reporte</p>
+                <textarea asp-for="Descripcion" id="txtDescripcion" rows="4" placeholder="Describe el problema con detalle. ¿Qué tan peligroso es? ¿Cuánto tiempo lleva así?" required></textarea>
             </div>
 
             <input type="hidden" asp-for="Titulo" id="tituloInput" />
@@ -294,6 +305,40 @@
             label.querySelector('svg').style.display = 'none';
             label.querySelector('span').style.display = 'none';
         }
+    });
+
+    // Tipo de Post Toggle
+    document.querySelectorAll('input[name="TipoPost"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const isConsulta = this.value === "Consulta";
+            const categoriasDiv = document.getElementById('categorias');
+            const btnSubir = document.getElementById('btnSubir');
+            const lblDescripcion = document.getElementById('lblDescripcion');
+            const txtDescripcion = document.getElementById('txtDescripcion');
+            
+            if (isConsulta) {
+                categoriasDiv.style.display = 'none';
+                document.getElementById('categoriaInput').value = 'Consulta General'; // Valor por defecto
+                
+                // Construir sub-título basico para consulta
+                const ubicacion = document.getElementById('Ubicacion').value || 'la zona';
+                document.getElementById('tituloInput').value = 'Consulta sobre ' + ubicacion;
+
+                lblDescripcion.textContent = "Detalles de la consulta";
+                txtDescripcion.placeholder = "Escribe aquí tu duda sobre el vecindario. Ej: ¿Qué tal es la seguridad de noche? ¿Es tranquilo?";
+
+                btnSubir.innerHTML = 'PUBLICAR CONSULTA <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.38-.49 1.636-1.574 3.01-1.574 3.01s1.58-.291 3.037-.93A9.52 9.52 0 0 0 12 20.25z"/></svg>';
+            } else {
+                categoriasDiv.style.display = 'grid';
+                document.getElementById('categoriaInput').value = ''; // Resetear para forzar validacion manual
+                document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('selected'));
+                
+                lblDescripcion.textContent = "Descripción del reporte";
+                txtDescripcion.placeholder = "Describe el problema con detalle. ¿Qué tan peligroso es? ¿Cuánto tiempo lleva así?";
+
+                btnSubir.innerHTML = 'SUBIR REPORTE <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 10.5 12 3m0 0 7.5 7.5M12 3v18"/></svg>';
+            }
+        });
     });
 
     // Validacion Form

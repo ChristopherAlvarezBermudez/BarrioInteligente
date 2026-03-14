@@ -69,12 +69,13 @@ namespace BarrioInteligenteWeb.Controllers
             }
         }
 
-        public IActionResult Comunidad(string filtro = "recientes", double? lat = null, double? lon = null)
+        public IActionResult Comunidad(string filtro = "recientes", double? lat = null, double? lon = null, string tipo = "Reporte")
         {
             try
             {
                 var query = _context.Reportes
                     .Include(r => r.Usuario)
+                    .Where(r => r.TipoPost == tipo || (tipo == "Reporte" && string.IsNullOrEmpty(r.TipoPost)))
                     .AsEnumerable(); // Haversine
 
                 List<Reporte> lista;
@@ -106,6 +107,7 @@ namespace BarrioInteligenteWeb.Controllers
                 }
 
                 ViewBag.FiltroActivo = filtro;
+                ViewBag.TipoActual = tipo;
                 ViewBag.FotoPerfil = _context.Usuarios
                     .Where(u => u.Id == UsuarioActualId)
                     .Select(u => u.FotoPerfil)
@@ -136,6 +138,11 @@ namespace BarrioInteligenteWeb.Controllers
             {
                 reporte.UsuarioId = UsuarioActualId;
                 reporte.Fecha = DateTime.Now;
+
+                var direccionParaTitulo = !string.IsNullOrEmpty(reporte.DireccionFisica) 
+                    ? reporte.DireccionFisica 
+                    : "zona reportada";
+                reporte.Titulo = $"{reporte.Categoria} en {direccionParaTitulo}";
 
                 if (imagen != null && imagen.Length > 0)
                 {
@@ -259,17 +266,24 @@ namespace BarrioInteligenteWeb.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Upvote(int id)
+        public async Task<IActionResult> ConfirmarReporte(int id)
         {
             try
             {
-                var reporte = _context.Reportes.FirstOrDefault(r => r.Id == id);
-                if (reporte == null) return NotFound();
+                var reporte = await _context.Reportes.FirstOrDefaultAsync(r => r.Id == id);
+                if (reporte == null) return Json(new { success = false, message = "Reporte no encontrado." });
 
-                var yaVoto = _context.Validaciones
-                    .Any(v => v.ReporteId == id && v.UsuarioId == UsuarioActualId);
+                var validacion = await _context.Validaciones
+                    .FirstOrDefaultAsync(v => v.ReporteId == id && v.UsuarioId == UsuarioActualId);
 
-                if (!yaVoto)
+                bool estaConfirmado = false;
+
+                if (validacion != null)
+                {
+                    _context.Validaciones.Remove(validacion);
+                    reporte.Upvotes = Math.Max(0, reporte.Upvotes - 1);
+                }
+                else
                 {
                     _context.Validaciones.Add(new Validacion
                     {
@@ -278,15 +292,18 @@ namespace BarrioInteligenteWeb.Controllers
                         FechaVoto = DateTime.Now
                     });
                     reporte.Upvotes++;
-                    await _context.SaveChangesAsync();
+                    estaConfirmado = true;
                 }
+
+                await _context.SaveChangesAsync();
+                
+                return Json(new { success = true, estaConfirmado = estaConfirmado, nuevoConteo = reporte.Upvotes });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al procesar upvote. ReporteId={Id}, UsuarioId={UsuarioId}", id, UsuarioActualId);
+                _logger.LogError(ex, "Error al confirmar reporte. ReporteId={Id}, UsuarioId={UsuarioId}", id, UsuarioActualId);
+                return Json(new { success = false, message = "Error interno del servidor." });
             }
-
-            return RedirectToAction(nameof(Detalles), new { id });
         }
 
         [HttpPost]

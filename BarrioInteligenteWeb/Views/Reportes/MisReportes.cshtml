@@ -181,7 +181,10 @@
                     _        => "📍"
                 };
                 var horasAtras = (int)(DateTime.Now - r.Fecha).TotalHours;
-                var tiempo = horasAtras < 1 ? "Hace menos de 1h" : horasAtras == 1 ? "Hace 1h" : $"Hace {horasAtras}h";
+                var tiempo = horasAtras < 1 ? "Hace menos de 1h" :
+                             horasAtras == 1 ? "Hace 1h" :
+                             horasAtras < 24 ? $"Hace {horasAtras}h" :
+                             r.Fecha.ToString("dd MMM yyyy 'a las' hh:mm tt");
 
                 <a href="@Url.Action("Detalles", "Reportes", new { id = r.Id })" class="reporte-card">
                     <div class="card-img">
