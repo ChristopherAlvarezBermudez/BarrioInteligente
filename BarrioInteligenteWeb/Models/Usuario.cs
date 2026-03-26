@@ -3,6 +3,15 @@ using System.ComponentModel.DataAnnotations;
 
 namespace BarrioInteligenteWeb.Models
 {
+    public enum NivelReputacion
+    {
+        Excelente = 0,
+        Buena = 1,
+        Regular = 2,
+        Mala = 3,
+        Critica = 4
+    }
+
     public class Usuario
     {
         [Key]
@@ -32,5 +41,9 @@ namespace BarrioInteligenteWeb.Models
         public DateTime? ExpiracionCodigo { get; set; }
 
         public int PuntosReputacion { get; set; } = 0;
+
+        public NivelReputacion Reputacion { get; set; } = NivelReputacion.Excelente;
+
+        public string? MotivoReputacion { get; set; }
     }
 }
