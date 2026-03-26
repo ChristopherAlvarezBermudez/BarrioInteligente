@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Net;
+using System.Net.Mail;
 using BarrioInteligenteWeb.Data;
 using BarrioInteligenteWeb.Models;
 using BarrioInteligenteWeb.Services;
@@ -15,12 +17,14 @@ namespace BarrioInteligenteWeb.Controllers
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _env;
         private readonly IEmailService _emailService;
+        private readonly IConfiguration _config;
 
-        public AccountController(ApplicationDbContext context, IWebHostEnvironment env, IEmailService emailService)
+        public AccountController(ApplicationDbContext context, IWebHostEnvironment env, IEmailService emailService, IConfiguration config)
         {
             _context = context;
             _env = env;
             _emailService = emailService;
+            _config = config;
         }
 
         // GET: /Account/Login
@@ -466,6 +470,130 @@ namespace BarrioInteligenteWeb.Controllers
                 return RedirectToAction("Perfil");
             }
         }
+
+        // ─── RECUPERACIÓN DE CONTRASEÑA ────────────────────────────────────────
+
+        // GET: /Account/OlvidePassword
+        public IActionResult OlvidePassword()
+        {
+            return View();
+        }
+
+        // POST: /Account/OlvidePassword
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> OlvidePassword(string correo)
+        {
+            var usuario = _context.Usuarios.FirstOrDefault(u => u.Correo == correo);
+            if (usuario == null)
+            {
+                ViewBag.Error = "No existe una cuenta con ese correo.";
+                return View();
+            }
+
+            var codigo = new Random().Next(100000, 999999).ToString();
+            usuario.CodigoRecuperacion = codigo;
+            usuario.ExpiracionCodigo = DateTime.Now.AddMinutes(15);
+            await _context.SaveChangesAsync();
+
+            EnviarCorreoRecuperacion(correo, codigo);
+
+            TempData["CorreoRecuperacion"] = correo;
+            return RedirectToAction("VerificarCodigo");
+        }
+
+        // GET: /Account/VerificarCodigo
+        public IActionResult VerificarCodigo()
+        {
+            var correo = TempData["CorreoRecuperacion"]?.ToString();
+            if (string.IsNullOrEmpty(correo))
+                return RedirectToAction("OlvidePassword");
+
+            ViewBag.Correo = correo;
+            TempData.Keep("CorreoRecuperacion");
+            return View();
+        }
+
+        // POST: /Account/VerificarCodigo
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult VerificarCodigo(string correo, string codigo)
+        {
+            var usuario = _context.Usuarios.FirstOrDefault(u => u.Correo == correo);
+            if (usuario == null ||
+                usuario.CodigoRecuperacion != codigo ||
+                usuario.ExpiracionCodigo == null ||
+                usuario.ExpiracionCodigo <= DateTime.Now)
+            {
+                ViewBag.Error = "El código es incorrecto o ha expirado.";
+                ViewBag.Correo = correo;
+                TempData["CorreoRecuperacion"] = correo;
+                TempData.Keep("CorreoRecuperacion");
+                return View();
+            }
+
+            TempData["CorreoRestablecimiento"] = correo;
+            return RedirectToAction("RestablecerPassword");
+        }
+
+        // GET: /Account/RestablecerPassword
+        public IActionResult RestablecerPassword()
+        {
+            var correo = TempData["CorreoRestablecimiento"]?.ToString();
+            if (string.IsNullOrEmpty(correo))
+                return RedirectToAction("OlvidePassword");
+
+            ViewBag.Correo = correo;
+            TempData.Keep("CorreoRestablecimiento");
+            return View();
+        }
+
+        // POST: /Account/RestablecerPassword
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RestablecerPassword(string correo, string nuevaPassword, string confirmarPassword)
+        {
+            if (nuevaPassword != confirmarPassword)
+            {
+                ViewBag.Error = "Las contraseñas no coinciden.";
+                ViewBag.Correo = correo;
+                TempData["CorreoRestablecimiento"] = correo;
+                TempData.Keep("CorreoRestablecimiento");
+                return View();
+            }
+
+            var usuario = _context.Usuarios.FirstOrDefault(u => u.Correo == correo);
+            if (usuario == null)
+                return RedirectToAction("OlvidePassword");
+
+            usuario.Password = HashPassword(nuevaPassword);
+            usuario.CodigoRecuperacion = null;
+            usuario.ExpiracionCodigo = null;
+            await _context.SaveChangesAsync();
+
+            TempData["LoginMessage"] = "¡Contraseña restablecida con éxito! Ya puedes iniciar sesión.";
+            return RedirectToAction("Login");
+        }
+
+        private void EnviarCorreoRecuperacion(string destino, string codigo)
+        {
+            var from = _config["EmailSettings:From"];
+            var password = _config["EmailSettings:Password"];
+
+            var mensaje = new MailMessage();
+            mensaje.From = new MailAddress(from!);
+            mensaje.To.Add(destino);
+            mensaje.Subject = "Recuperación de contraseña - Barrio Inteligente";
+            mensaje.IsBodyHtml = true;
+            mensaje.Body = $"<h3>Recupera tu contraseña</h3><p>Tu código de verificación es: <b>{codigo}</b></p><p>Este código expira en 15 minutos.</p>";
+
+            using var smtp = new SmtpClient("smtp.gmail.com", 587);
+            smtp.Credentials = new NetworkCredential(from, password);
+            smtp.EnableSsl = true;
+            smtp.Send(mensaje);
+        }
+
+        // ──────────────────────────────────────────────────────────────────────
 
         private static string HashPassword(string password)
         {

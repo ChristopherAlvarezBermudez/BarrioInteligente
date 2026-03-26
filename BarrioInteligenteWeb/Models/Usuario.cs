@@ -27,5 +27,10 @@ namespace BarrioInteligenteWeb.Models
         public string? CodigoVerificacion { get; set; }
 
         public DateTime? FechaEliminacionProgramada { get; set; }
+
+        public string? CodigoRecuperacion { get; set; }
+        public DateTime? ExpiracionCodigo { get; set; }
+
+        public int PuntosReputacion { get; set; } = 0;
     }
 }
