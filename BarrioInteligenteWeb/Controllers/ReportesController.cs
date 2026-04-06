@@ -4,6 +4,9 @@ using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using BarrioInteligenteWeb.Data;
 using BarrioInteligenteWeb.Models;
+using System.Text.Json;
+using Microsoft.AspNetCore.SignalR;
+using BarrioInteligenteWeb.Hubs;
 
 namespace BarrioInteligenteWeb.Controllers
 {
@@ -13,15 +16,18 @@ namespace BarrioInteligenteWeb.Controllers
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _env;
         private readonly ILogger<ReportesController> _logger;
+        private readonly IHubContext<ReportesHub> _hubContext;
 
         public ReportesController(
             ApplicationDbContext context,
             IWebHostEnvironment env,
-            ILogger<ReportesController> logger)
+            ILogger<ReportesController> logger,
+            IHubContext<ReportesHub> hubContext)
         {
             _context = context;
             _env = env;
             _logger = logger;
+            _hubContext = hubContext;
         }
 
         private int UsuarioActualId =>
@@ -66,6 +72,45 @@ namespace BarrioInteligenteWeb.Controllers
             {
                 _logger.LogError(ex, "Error al cargar Mis Reportes para usuario {UsuarioId}", UsuarioActualId);
                 return View("MisReportes", new List<Reporte>());
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Dashboard()
+        {
+            try
+            {
+                var reportesCategorias = await _context.Reportes
+                    .GroupBy(r => r.Categoria)
+                    .Select(g => new { Categoria = g.Key, Count = g.Count() })
+                    .ToListAsync();
+
+                var reportesEstados = await _context.Reportes
+                    .GroupBy(r => r.Estado)
+                    .Select(g => new { Estado = g.Key, Count = g.Count() })
+                    .ToListAsync();
+
+                var topUsuarios = await _context.Usuarios
+                    .OrderBy(u => u.Reputacion)
+                    .ThenByDescending(u => u.PuntosReputacion)
+                    .Take(3)
+                    .ToListAsync();
+
+                ViewBag.DataCategorias = JsonSerializer.Serialize(reportesCategorias);
+                ViewBag.DataEstados = JsonSerializer.Serialize(reportesEstados);
+                ViewBag.TopCiudadanos = topUsuarios;
+                
+                ViewBag.FotoPerfil = await _context.Usuarios
+                    .Where(u => u.Id == UsuarioActualId)
+                    .Select(u => u.FotoPerfil)
+                    .FirstOrDefaultAsync();
+
+                return View();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar el dashboard");
+                return View();
             }
         }
 
@@ -172,6 +217,9 @@ namespace BarrioInteligenteWeb.Controllers
                 {
                     _context.Reportes.Add(reporte);
                     await _context.SaveChangesAsync();
+
+                    await _hubContext.Clients.All.SendAsync("RecibirNuevoReporte", reporte.Latitud, reporte.Longitud, reporte.Titulo, reporte.Categoria);
+
                     _logger.LogInformation("Reporte creado ID={Id} por usuario {UsuarioId}", reporte.Id, UsuarioActualId);
                     return RedirectToAction(nameof(Index));
                 }
@@ -330,6 +378,54 @@ namespace BarrioInteligenteWeb.Controllers
             }
 
             return RedirectToAction(nameof(Detalles), new { id = reporteId });
+        }
+
+        /// <summary>
+        /// Endpoint JSON que retorna objetos enriquecidos de incidencias
+        /// filtradas por categoría y estado, para el mapa de calor interactivo.
+        /// Parámetros: ?categoria=Basura&amp;estadoFiltro=Activos
+        /// estadoFiltro: "Activos" (Pendiente + En Proceso) | "Resueltos"
+        /// Formato: [{ lat, lng, intensidad, id, titulo }, ...]
+        /// </summary>
+        [HttpGet]
+        public IActionResult ObtenerCoordenadasCalor(string? categoria, string estadoFiltro = "Activos")
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(categoria))
+                    return Json(Array.Empty<object>());
+
+                var query = _context.Reportes
+                    .Where(r => r.Categoria == categoria && (r.Latitud != 0 || r.Longitud != 0));
+
+                // Filtrar por estado
+                if (estadoFiltro == "Activos")
+                    query = query.Where(r => r.Estado == "Pendiente" || r.Estado == "En Proceso");
+                else if (estadoFiltro == "Resueltos")
+                    query = query.Where(r => r.Estado == "Resuelto");
+
+                var datos = query
+                    .Select(r => new
+                    {
+                        lat = r.Latitud,
+                        lng = r.Longitud,
+                        intensidad = r.Upvotes > 0 ? r.Upvotes * 5.0 : 1.0,
+                        id = r.Id,
+                        titulo = r.Titulo,
+                        direccion = r.DireccionFisica,
+                        categoria = r.Categoria,
+                        estado = r.Estado,
+                        foto = string.IsNullOrWhiteSpace(r.ImagenUrl) ? "" : r.ImagenUrl
+                    })
+                    .ToList();
+
+                return Json(datos);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener coordenadas para el mapa de calor. Categoría={Categoria}, Estado={Estado}", categoria, estadoFiltro);
+                return Json(Array.Empty<object>());
+            }
         }
     }
 }

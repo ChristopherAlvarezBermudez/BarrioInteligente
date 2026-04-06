@@ -13,32 +13,139 @@
     <link rel="stylesheet" href="~/css/barrio.css" asp-append-version="true" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        .btn-heatmap {
-            position: absolute;
-            top: 75px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1000;
+        /* ── Control de Mapa de Calor (Leaflet custom control) ── */
+        .heatmap-control {
+            position: relative;
+        }
+        .heatmap-toggle-btn {
+            width: 36px;
+            height: 36px;
             background: #fff;
-            border: 2px solid #ff4500;
-            color: #ff4500;
-            font-weight: 700;
-            padding: 8px 18px;
-            border-radius: 20px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-            font-size: 14px;
+            border: 2px solid rgba(0,0,0,0.2);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             cursor: pointer;
-            transition: all 0.2s;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.25);
+            transition: background 0.15s, border-color 0.15s;
+            padding: 0;
+            font-size: 18px;
+            line-height: 1;
         }
-        .btn-heatmap:hover {
-            background: #ff4500;
+        .heatmap-toggle-btn:hover {
+            background: #f4f4f4;
+        }
+        .heatmap-toggle-btn.active {
+            background: #111;
+            border-color: #111;
+        }
+        .heatmap-toggle-btn.active .heatmap-icon-off { display: none; }
+        .heatmap-toggle-btn:not(.active) .heatmap-icon-on { display: none; }
+        .heatmap-icon-on { filter: brightness(10); }
+
+        .heatmap-dropdown {
+            display: none;
+            position: absolute;
+            top: 42px;
+            right: 0;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.18);
+            min-width: 170px;
+            overflow: hidden;
+            z-index: 1001;
+            animation: hd-fade-in 0.15s ease;
+        }
+        .heatmap-dropdown.open {
+            display: block;
+        }
+        @@keyframes hd-fade-in {
+            from { opacity: 0; transform: translateY(-6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .heatmap-dropdown-header {
+            padding: 10px 14px 6px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .heatmap-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+            cursor: pointer;
+            transition: background 0.12s;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+        }
+        .heatmap-dropdown-item:hover {
+            background: #f5f5f5;
+        }
+        .heatmap-dropdown-item.selected {
+            background: #111;
             color: #fff;
         }
-        .btn-heatmap.active {
-            background: #ff4500;
+        .heatmap-dropdown-item .cat-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .heatmap-dropdown-divider {
+            height: 1px;
+            background: #eee;
+            margin: 0;
+        }
+        .heatmap-dropdown-item.off-btn {
+            color: #c0392b;
+            font-weight: 700;
+        }
+        .heatmap-dropdown-item.off-btn:hover {
+            background: #fff0f0;
+        }
+
+        /* ── Control de Filtro por Estado ── */
+        .estado-filter-control {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.25);
+            border: 2px solid rgba(0,0,0,0.2);
+            overflow: hidden;
+            display: none;
+            flex-direction: row;
+        }
+        .estado-filter-control.visible {
+            display: flex;
+        }
+        .estado-filter-btn {
+            border: none;
+            background: #fff;
+            padding: 6px 12px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.12s, color 0.12s;
+            color: #666;
+            white-space: nowrap;
+        }
+        .estado-filter-btn:first-child {
+            border-right: 1px solid #eee;
+        }
+        .estado-filter-btn:hover {
+            background: #f5f5f5;
+        }
+        .estado-filter-btn.active {
+            background: #111;
             color: #fff;
-            border-color: #ff4500;
-            box-shadow: 0 4px 14px rgba(255,69,0,0.4);
         }
 
         #mapa {
@@ -106,7 +213,7 @@
         </a>
     </header>
 
-    <button id="btnToggleHeatmap" class="btn-heatmap">🔥 Ver Mapa de Calor de Basura</button>
+
     <div id="mapa"></div>
 
     <!-- FAB fijo encima del bottom nav -->
@@ -135,13 +242,37 @@
             </svg>
             <span>Comunidad</span>
         </a>
+    
+    <nav class="bottom-nav">
+        <!-- ... navigation items ... (keep as is, the replacement chunk only targets the insertion point below) -->
+        <a href="@Url.Action("Dashboard", "Reportes")">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+            </svg>
+            <span>Panel</span>
+        </a>
     </nav>
+
+    <!-- ── Toast de Bootstrap para Notificaciones SignalR ── -->
+    <div class="toast-container position-fixed top-0 start-50 translate-middle-x p-3 mt-5" style="z-index: 9999;">
+        <div id="liveToast" class="toast align-items-center text-bg-dark border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="4000">
+            <div class="toast-header bg-dark text-white border-dark">
+                <span style="font-size: 1.2rem; margin-right: 8px;">🚨</span>
+                <strong class="me-auto font-monospace">¡Nuevo Reporte en la zona!</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="toastBody" style="font-size: 14px;">
+                <!-- Se llenará dinámicamente -->
+            </div>
+        </div>
+    </div>
 
 </div>
 
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.12/signalr.min.js"></script>
 <script>
     const reportes = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
         Model.Select(r => new {
@@ -154,7 +285,8 @@
             r.Longitud,
             r.DireccionFisica,
             r.Descripcion,
-            detallesUrl = Url.Action("Detalles", "Reportes", new { id = r.Id })
+            detallesUrl = Url.Action("Detalles", "Reportes", new { id = r.Id }),
+            foto = string.IsNullOrWhiteSpace(r.ImagenUrl) ? "" : r.ImagenUrl
         }),
         new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }
     ));
@@ -186,16 +318,9 @@
     }
 
     let marcadoresNormales = [];
-    let puntosCalorBasura = [];
 
     reportes.forEach(reporte => {
         if (reporte.latitud === 0 && reporte.longitud === 0) return;
-
-        // Condición estricta para el mapa de calor (Solo Basura)
-        if (reporte.categoria === 'Basura') {
-            const intensidad = reporte.upvotes > 0 ? reporte.upvotes * 5 : 1; 
-            puntosCalorBasura.push([reporte.latitud, reporte.longitud, intensidad]);
-        }
 
         const emoji = emojiCategoria[reporte.categoria] || '📍';
         const icon = L.divIcon({
@@ -208,47 +333,294 @@
         const ubicacionMostrada = reporte.direccionFisica || "Ubicación sin dirección";
         const descripcionTruncada = truncarTexto(reporte.descripcion, 90);
 
+        let fotoHtml = reporte.foto && reporte.foto.trim() !== "" 
+            ? `<img src="${reporte.foto}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px; flex-shrink: 0; border: 1px solid #ccc;" alt="Foto" onerror="this.outerHTML='<div style=\\'width:50px;height:50px;border-radius:8px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;\\'>📷</div>'">`
+            : `<div style="width: 50px; height: 50px; border-radius: 8px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">📷</div>`;
+
         const marker = L.marker([reporte.latitud, reporte.longitud], { icon })
             .bindPopup(`
-                <div style="font-family:'Inter',sans-serif;min-width:180px;">
-                    <strong style="font-size:14px;color:#111;">${reporte.titulo}</strong><br>
-                    <small style="color:#777;display:block;margin-bottom:4px;">📍 ${ubicacionMostrada}</small>
-                    <small style="color:#555;display:block;margin-bottom:6px;">${descripcionTruncada}</small>
-                    <small style="color:#999;">${reporte.categoria} · ${reporte.estado} · ✅ ${reporte.upvotes}</small><br>
-                    <a href="${reporte.detallesUrl}"
-                       style="display:inline-block;margin-top:8px;padding:6px 12px;background:#111;color:#fff;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;">
-                        Ver detalles →
-                    </a>
+                <div style="display: flex; gap: 10px; padding-bottom: 4px; align-items: flex-start; font-family:'Inter',sans-serif; min-width: 240px; max-width: 280px;">
+                    ${fotoHtml}
+                    <div style="flex-grow: 1; min-width: 0;">
+                        <h6 style="margin: 0 0 4px 0; font-size: 14px; font-weight: bold; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${reporte.titulo}</h6>
+                        <p style="margin: 0 0 6px 0; font-size: 11px; color: #666; line-height: 1.2;">
+                            📍 ${reporte.direccionFisica || 'Ubicación'}
+                        </p>
+                        <p style="margin: 0 0 8px 0; font-size: 11px; color: #888;">
+                            ${reporte.categoria} • ${reporte.estado}
+                        </p>
+                        <a href="/Reportes/Detalles/${reporte.id}" style="display: inline-block; background: #212529; color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; text-decoration: none; font-weight: bold;">Ver detalles →</a>
+                    </div>
                 </div>
-            `, { maxWidth: 240 });
+            `, { maxWidth: 280, minWidth: 240 });
             
         marker.addTo(map);
         marcadoresNormales.push(marker);
     });
 
-    let capaCalor = L.heatLayer(puntosCalorBasura, {
-        radius: 25, 
-        blur: 15, 
-        maxZoom: 17, 
-        gradient: {0.4: 'blue', 0.6: 'lime', 0.8: 'yellow', 1.0: 'red'}
-    });
-
+    // ── Mapa de Calor Multitarea ──
+    let categoriaActual = null;
     let calorActivo = false;
-    document.getElementById('btnToggleHeatmap').addEventListener('click', function() {
-        if (!calorActivo) {
-            map.addLayer(capaCalor);
-            marcadoresNormales.forEach(m => map.removeLayer(m)); // Ocultar marcadores normales
-            this.classList.add('active');
-            this.textContent = '📍 Ver Marcadores Normales';
-            calorActivo = true;
-        } else {
+    let reportesCalorActuales = [];
+    let estadoActual = 'Activos';
+
+    const categoriasDisponibles = [
+        { nombre: 'Basura',  emoji: '🗑️', color: '#e67e22' },
+        { nombre: 'Bache',   emoji: '🚧', color: '#e74c3c' },
+        { nombre: 'Luz',     emoji: '💡', color: '#f1c40f' },
+        { nombre: 'Otro',    emoji: '📍', color: '#9b59b6' }
+    ];
+
+    // Configuración visual del heatmap (reutilizada en cada recreación)
+    const heatmapOpts = {
+        radius: 40,
+        blur: 35,
+        maxZoom: 17,
+        gradient: { 0.4: 'blue', 0.6: 'lime', 0.8: 'yellow', 1.0: 'red' }
+    };
+
+    let capaCalor = null;
+
+    /**
+     * Carga el mapa de calor para la categoría seleccionada.
+     * Patrón: Destruir capa anterior → Crear nueva instancia.
+     */
+    function cargarMapaCalorPorCategoria(categoriaSeleccionada) {
+        categoriaActual = categoriaSeleccionada;
+
+        const url = '@Url.Action("ObtenerCoordenadasCalor", "Reportes")' +
+                    '?categoria=' + encodeURIComponent(categoriaSeleccionada) +
+                    '&estadoFiltro=' + encodeURIComponent(estadoActual);
+
+        fetch(url)
+            .then(response => {
+                if (!response.ok) throw new Error('Error HTTP: ' + response.status);
+                return response.json();
+            })
+            .then(data => {
+                // Guardar datos enriquecidos para clics interactivos
+                reportesCalorActuales = data;
+
+                // Mapear al formato que necesita L.heatLayer: [lat, lng, intensidad]
+                const heatData = data.map(d => [d.lat, d.lng, d.intensidad]);
+
+                // Destruir capa anterior si existe
+                if (capaCalor) {
+                    map.removeLayer(capaCalor);
+                    capaCalor = null;
+                }
+
+                // Crear capa nueva desde cero con los datos frescos
+                capaCalor = L.heatLayer(heatData, heatmapOpts).addTo(map);
+
+                // Ocultar marcadores normales si es la primera activación
+                if (!calorActivo) {
+                    marcadoresNormales.forEach(m => map.removeLayer(m));
+                }
+                calorActivo = true;
+
+                // Actualizar UI del control
+                const toggleBtn = document.querySelector('.heatmap-toggle-btn');
+                if (toggleBtn) toggleBtn.classList.add('active');
+                actualizarDropdownSeleccion();
+            })
+            .catch(error => {
+                console.error('[MapaCalor] Error al cargar categoría:', error);
+            });
+    }
+
+    /** Desactiva el mapa de calor y restaura los marcadores normales. */
+    function desactivarMapaCalor() {
+        // Destruir la capa completamente
+        if (capaCalor) {
             map.removeLayer(capaCalor);
-            marcadoresNormales.forEach(m => map.addLayer(m)); // Mostrar marcadores normales
-            this.classList.remove('active');
-            this.textContent = '🔥 Ver Mapa de Calor de Basura';
-            calorActivo = false;
+            capaCalor = null;
+        }
+        categoriaActual = null;
+        calorActivo = false;
+        reportesCalorActuales = [];
+        marcadoresNormales.forEach(m => map.addLayer(m));
+
+        const toggleBtn = document.querySelector('.heatmap-toggle-btn');
+        if (toggleBtn) toggleBtn.classList.remove('active');
+        actualizarDropdownSeleccion();
+    }
+
+    // ── Clic interactivo en zona de calor (Efecto Snapchat) ──
+    map.on('click', function (e) {
+        if (!calorActivo || reportesCalorActuales.length === 0) return;
+
+        const radioBusquedaMetros = 150;
+        const reportesEncontrados = [];
+
+        reportesCalorActuales.forEach(function (reporte) {
+            const latLngReporte = L.latLng(reporte.lat, reporte.lng);
+            if (e.latlng.distanceTo(latLngReporte) <= radioBusquedaMetros) {
+                reportesEncontrados.push(reporte);
+            }
+        });
+
+        if (reportesEncontrados.length > 0) {
+            let htmlLista = '';
+            reportesEncontrados.forEach(r => {
+                let fotoHtml = r.foto && r.foto.trim() !== "" 
+                    ? `<img src="${r.foto}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px; flex-shrink: 0; border: 1px solid #ccc;" alt="Foto" onerror="this.outerHTML='<div style=\\'width:50px;height:50px;border-radius:8px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;\\'>📷</div>'">`
+                    : `<div style="width: 50px; height: 50px; border-radius: 8px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">📷</div>`;
+
+                htmlLista += `
+                    <div style="display: flex; gap: 10px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #e0e0e0; align-items: flex-start;">
+                        ${fotoHtml}
+                        <div style="flex-grow: 1; min-width: 0;">
+                            <h6 style="margin: 0 0 4px 0; font-size: 14px; font-weight: bold; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${r.titulo}</h6>
+                            <p style="margin: 0 0 6px 0; font-size: 11px; color: #666; line-height: 1.2;">
+                                📍 ${r.direccion || 'Ubicación'}
+                            </p>
+                            <p style="margin: 0 0 8px 0; font-size: 11px; color: #888;">
+                                ${r.categoria} • ${r.estado}
+                            </p>
+                            <a href="/Reportes/Detalles/${r.id}" style="display: inline-block; background: #212529; color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; text-decoration: none; font-weight: bold;">Ver detalles →</a>
+                        </div>
+                    </div>
+                `;
+            });
+
+            const htmlPopup = `
+                <div style="font-family:'Inter',sans-serif;min-width:240px;max-width:280px;">
+                    <h6 style="color:#ff4500;font-weight:800;margin:0 0 4px;font-size:14px;">🔥 Zona Caliente</h6>
+                    <p style="font-size:12px;color:#666;margin:0 0 12px;font-weight:500;">
+                        ${reportesEncontrados.length} reporte${reportesEncontrados.length > 1 ? 's' : ''} en esta zona
+                    </p>
+                    <div style="max-height:240px;overflow-y:auto;padding-right:4px;">
+                        ${htmlLista}
+                    </div>
+                </div>
+            `;
+
+            L.popup({ maxWidth: 280, minWidth: 240 })
+                .setLatLng(e.latlng)
+                .setContent(htmlPopup)
+                .openOn(map);
         }
     });
+
+    /** Marca visualmente la categoría seleccionada en el dropdown. */
+    function actualizarDropdownSeleccion() {
+        document.querySelectorAll('.heatmap-dropdown-item[data-cat]').forEach(item => {
+            item.classList.toggle('selected', item.dataset.cat === categoriaActual);
+        });
+    }
+
+    // Actualización automática cada 30 segundos usando categoriaActual
+    setInterval(() => {
+        if (calorActivo && categoriaActual) {
+            cargarMapaCalorPorCategoria(categoriaActual);
+        }
+    }, 30000);
+
+    // ── Control Leaflet personalizado (esquina superior derecha) ──
+    const HeatmapControl = L.Control.extend({
+        options: { position: 'topright' },
+        onAdd: function () {
+            const container = L.DomUtil.create('div', 'heatmap-control leaflet-bar');
+            L.DomEvent.disableClickPropagation(container);
+            L.DomEvent.disableScrollPropagation(container);
+
+            // Botón principal
+            const btn = L.DomUtil.create('button', 'heatmap-toggle-btn', container);
+            btn.title = 'Mapa de calor por categoría';
+            btn.setAttribute('aria-label', 'Mapa de calor por categoría');
+            btn.innerHTML = `
+                <span class="heatmap-icon-off" style="font-size:17px;">🔥</span>
+                <span class="heatmap-icon-on" style="font-size:17px;">🔥</span>
+            `;
+
+            // Dropdown
+            const dropdown = L.DomUtil.create('div', 'heatmap-dropdown', container);
+
+            let ddHTML = '<div class="heatmap-dropdown-header">Categoría</div>';
+            categoriasDisponibles.forEach(cat => {
+                ddHTML += `
+                    <button class="heatmap-dropdown-item" data-cat="${cat.nombre}">
+                        <span class="cat-dot" style="background:${cat.color}"></span>
+                        ${cat.emoji} ${cat.nombre}
+                    </button>`;
+            });
+            ddHTML += '<div class="heatmap-dropdown-divider"></div>';
+            ddHTML += '<button class="heatmap-dropdown-item off-btn">✕ Desactivar</button>';
+            dropdown.innerHTML = ddHTML;
+
+            // Toggle dropdown on click
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dropdown.classList.toggle('open');
+            });
+
+            // Categoría seleccionada
+            dropdown.querySelectorAll('.heatmap-dropdown-item[data-cat]').forEach(item => {
+                item.addEventListener('click', () => {
+                    cargarMapaCalorPorCategoria(item.dataset.cat);
+                    dropdown.classList.remove('open');
+                });
+            });
+
+            // Botón desactivar
+            dropdown.querySelector('.off-btn').addEventListener('click', () => {
+                desactivarMapaCalor();
+                dropdown.classList.remove('open');
+            });
+
+            // Cerrar dropdown al hacer clic fuera
+            document.addEventListener('click', () => {
+                dropdown.classList.remove('open');
+            });
+
+            return container;
+        }
+    });
+    new HeatmapControl().addTo(map);
+
+    // ── Control de Filtro por Estado (debajo del control de categorías) ──
+    const EstadoFilterControl = L.Control.extend({
+        options: { position: 'topright' },
+        onAdd: function () {
+            const container = L.DomUtil.create('div', 'estado-filter-control leaflet-bar');
+            L.DomEvent.disableClickPropagation(container);
+
+            container.innerHTML = `
+                <button class="estado-filter-btn active" data-estado="Activos">🔴 Activos</button>
+                <button class="estado-filter-btn" data-estado="Resueltos">🟢 Resueltos</button>
+            `;
+
+            container.querySelectorAll('.estado-filter-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // Actualizar UI
+                    container.querySelectorAll('.estado-filter-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+
+                    // Actualizar estado y refrescar si hay mapa de calor activo
+                    estadoActual = btn.dataset.estado;
+                    if (calorActivo && categoriaActual) {
+                        cargarMapaCalorPorCategoria(categoriaActual);
+                    }
+                });
+            });
+
+            return container;
+        }
+    });
+    const estadoControl = new EstadoFilterControl();
+    estadoControl.addTo(map);
+
+    // Mostrar/ocultar el control de estado según si el heatmap está activo
+    const observarEstadoControl = new MutationObserver(() => {
+        const ctrl = document.querySelector('.estado-filter-control');
+        if (ctrl) ctrl.classList.toggle('visible', calorActivo);
+    });
+    // Polling sencillo: sincronizar visibilidad del control de estado
+    setInterval(() => {
+        const ctrl = document.querySelector('.estado-filter-control');
+        if (ctrl) ctrl.classList.toggle('visible', calorActivo);
+    }, 300);
 
     // Centrado inicial GPS
     if (navigator.geolocation && reportesConCoordenadas.length === 0) {
@@ -337,6 +709,38 @@
             : 'No se pudo obtener tu ubicación. Intenta de nuevo.';
         alert(msg);
     });
+
+    // ── SignalR: Tiempo Real ──
+    const connection = new signalR.HubConnectionBuilder().withUrl("/reportesHub").build();
+
+    connection.on("RecibirNuevoReporte", function (lat, lng, titulo, categoria) {
+        // Llenar y mostrar el Toast de Bootstrap
+        document.getElementById('toastBody').innerText = `${categoria}: ${titulo}`;
+        const toastEl = document.getElementById('liveToast');
+        const toast = new bootstrap.Toast(toastEl);
+        toast.show();
+
+        // Si el reporte tiene ubicación, agregarlo para el mapa de calor
+        if (lat !== 0 || lng !== 0) {
+            reportesCalorActuales.push({ 
+                lat: lat, 
+                lng: lng, 
+                titulo: titulo, 
+                categoria: categoria, 
+                intensidad: 1, 
+                foto: "", 
+                estado: "Pendiente" 
+            });
+            
+            // Refrescar mapa de calor si la categoría que estamos viendo es la misma o si aplica.
+            if (calorActivo && (categoriaActual === categoria || categoriaActual === null)) {
+                cargarMapaCalorPorCategoria(categoriaActual || categoria);
+            }
+        }
+    });
+
+    connection.start().catch(err => console.error("[SignalR] Error al conectar:", err));
+
 </script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-﻿/* ===== BARRIO INTELIGENTE — CSS personalizado ===== */
+/* ===== BARRIO INTELIGENTE — CSS personalizado ===== */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 *, *::before, *::after {
@@ -534,6 +534,7 @@ html, body {
 }
 
 /* ---- Botón Confirmar Reporte ---- */
+.btn-confirmar {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -549,7 +550,7 @@ html, body {
     transition: background 0.15s, color 0.15s;
     margin: 16px 0;
 }
-
+.btn-confirmar:hover {
     background: #111;
     color: #fff;
 }
@@ -571,6 +572,7 @@ html, body {
     color: var(--acento-rojo) !important;
 }
 .bottom-nav a.active::after {
+    background: var(--acento-rojo);
 }
 
 /* 2. Botones Principales (Reemplaza los botones negros y primarios) */
@@ -627,4 +629,91 @@ a:hover {
 }
 .btn-back:hover, .btn-user-icon:hover {
     color: var(--acento-rojo) !important;
+}
+
+/* ===== AVATAR RINGS — Sistema de Gamificación ===== */
+/* Contenedor base para cualquier avatar con anillo */
+.avatar-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+/* Excelente: anillo cónico dorado/verde animado + neón */
+.avatar-excellent > .avatar-grande,
+.avatar-excellent > .author-avatar,
+.avatar-excellent > .comment-avatar {
+    box-shadow: 0 0 0 3px #fff, 0 0 0 6px #16a34a, 0 0 14px 3px rgba(22,163,74,.4);
+    position: relative;
+    z-index: 1;
+}
+.avatar-excellent::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, #fbbf24, #16a34a, #4ade80, #fbbf24);
+    animation: ring-spin 4s linear infinite;
+    z-index: 0;
+}
+@keyframes ring-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Buena: aro plateado/azulado */
+.avatar-buena > .avatar-grande,
+.avatar-buena > .author-avatar,
+.avatar-buena > .comment-avatar {
+    box-shadow: 0 0 0 3px #fff, 0 0 0 5px #3b82f6, 0 0 10px 2px rgba(59,130,246,.25);
+}
+
+/* Regular: aro gris fino */
+.avatar-regular > .avatar-grande,
+.avatar-regular > .author-avatar,
+.avatar-regular > .comment-avatar {
+    box-shadow: 0 0 0 3px #fff, 0 0 0 5px #d1d5db;
+}
+
+/* Mala / Crítica: toque rojo sutil */
+.avatar-mala > .avatar-grande,
+.avatar-mala > .author-avatar,
+.avatar-mala > .comment-avatar,
+.avatar-critica > .avatar-grande,
+.avatar-critica > .author-avatar,
+.avatar-critica > .comment-avatar {
+    box-shadow: 0 0 0 3px #fff, 0 0 0 5px #f87171;
+}
+
+/* Insignia (estrella / escudo) en esquina inferior derecha */
+.avatar-badge {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    border-radius: 50%;
+    border: 2px solid #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0,0,0,.2);
+    animation: badge-pop .4s cubic-bezier(.34,1.56,.64,1) both;
+}
+/* Versión grande para Perfil.cshtml */
+.avatar-badge.badge-lg {
+    width: 26px;
+    height: 26px;
+    font-size: 13px;
+    bottom: -2px;
+    right: -2px;
+}
+@keyframes badge-pop {
+    from { transform: scale(0); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
 }

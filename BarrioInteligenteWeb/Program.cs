@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Serilog;
 using BarrioInteligenteWeb.Data;
 using BarrioInteligenteWeb.Services;
+using BarrioInteligenteWeb.Hubs;
 
 // Crear carpeta Logs si no existe
 Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "Logs"));
@@ -54,6 +55,8 @@ try
         options.KnownProxies.Clear();
     });
 
+    builder.Services.AddSignalR();
+
     var app = builder.Build();
 
     // Debe ir primero: transforma los headers X-Forwarded-* antes que el resto del pipeline
@@ -70,6 +73,8 @@ try
     app.UseRouting();
     app.UseAuthentication();
     app.UseAuthorization();
+
+    app.MapHub<ReportesHub>("/reportesHub");
 
     app.MapControllerRoute(
         name: "default",

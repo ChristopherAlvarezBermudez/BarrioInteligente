@@ -241,6 +241,133 @@
         .rep-line-regular   { background: #eab308; }
         .rep-line-mala      { background: #f97316; }
         .rep-line-inactive  { background: #e5e7eb; }
+        /* ── Avatar Rings (Gamificación estilo Discord) ── */
+        .avatar-wrapper {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+        /* Excelente: anillo dorado/verde degradado con neón y shimmer */
+        .avatar-excellent > .avatar-grande {
+            box-shadow: 0 0 0 4px #fff, 0 0 0 7px #16a34a, 0 0 18px 4px rgba(22,163,74,.45);
+        }
+        .avatar-excellent::before {
+            content: '';
+            position: absolute;
+            inset: -7px;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, #fbbf24, #16a34a, #4ade80, #fbbf24);
+            animation: ring-spin 4s linear infinite;
+            z-index: 0;
+        }
+        .avatar-excellent > .avatar-grande {
+            position: relative;
+            z-index: 1;
+        }
+        @@keyframes ring-spin {
+            to { transform: rotate(360deg); }
+        }
+        /* Estrella insignia para Excelente */
+        .avatar-badge {
+            position: absolute;
+            bottom: -2px;
+            right: -2px;
+            width: 26px;
+            height: 26px;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            border-radius: 50%;
+            border: 2px solid #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            z-index: 10;
+            box-shadow: 0 2px 6px rgba(0,0,0,.2);
+            animation: badge-pop .4s cubic-bezier(.34,1.56,.64,1) both;
+        }
+        @@keyframes badge-pop {
+            from { transform: scale(0); opacity: 0; }
+            to   { transform: scale(1); opacity: 1; }
+        }
+        /* Buena: aro plateado/azulado */
+        .avatar-buena > .avatar-grande {
+            box-shadow: 0 0 0 4px #fff, 0 0 0 7px #3b82f6, 0 0 12px 2px rgba(59,130,246,.3);
+        }
+        /* Regular: aro gris mínimo */
+        .avatar-regular > .avatar-grande {
+            box-shadow: 0 0 0 4px #fff, 0 0 0 6px #d1d5db;
+        }
+        /* Mala / Crítica: toque rojo sutil */
+        .avatar-mala > .avatar-grande,
+        .avatar-critica > .avatar-grande {
+            box-shadow: 0 0 0 4px #fff, 0 0 0 6px #f87171;
+        }
+
+        /* ── Modal Insignia ── */
+        .badge-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.45);
+            z-index: 9999;
+            align-items: flex-end;
+            justify-content: center;
+        }
+        .badge-modal-overlay.open {
+            display: flex;
+            animation: overlay-in .2s ease;
+        }
+        @@keyframes overlay-in {
+            from { opacity: 0; } to { opacity: 1; }
+        }
+        .badge-modal {
+            background: #fff;
+            border-radius: 24px 24px 0 0;
+            padding: 28px 24px 40px;
+            width: 100%;
+            max-width: 430px;
+            text-align: center;
+            animation: modal-up .3s cubic-bezier(.34,1.2,.64,1) both;
+        }
+        @@keyframes modal-up {
+            from { transform: translateY(100%); } to { transform: translateY(0); }
+        }
+        .badge-modal-icon {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            margin: 0 auto 16px;
+        }
+        .badge-modal-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: #111;
+            margin: 0 0 8px;
+        }
+        .badge-modal-desc {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.6;
+            margin: 0 0 24px;
+        }
+        .badge-modal-close {
+            width: 100%;
+            padding: 14px;
+            border-radius: 14px;
+            background: #111;
+            color: #fff;
+            border: none;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -260,42 +387,6 @@
             </div>
         }
 
-        <!-- Avatar tap-to-upload -->
-        <form asp-controller="Account" asp-action="SubirFoto" method="post" enctype="multipart/form-data" id="fotoForm">
-            @Html.AntiForgeryToken()
-            <input type="file" id="fotoInput" name="foto" accept="image/jpeg,image/png,image/webp"
-                   style="display:none" />
-            <div class="avatar-grande" onclick="document.getElementById('fotoInput').click()" title="Cambiar foto de perfil">
-                @if (!string.IsNullOrEmpty(Model.FotoPerfil))
-                {
-                    <img id="avatarPreview" src="@Model.FotoPerfil" alt="Foto de perfil" />
-                }
-                else
-                {
-                    <svg id="avatarSvg" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="44" height="44">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
-                    </svg>
-                    <img id="avatarPreview" src="" alt="" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%;" />
-                }
-                <div class="avatar-overlay">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="white" width="22" height="22">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/>
-                    </svg>
-                </div>
-            </div>
-        </form>
-        <p class="foto-hint">Toca la foto para cambiarla</p>
-
-        <p class="perfil-nombre">@Model.NombreCompleto</p>
-        <p class="perfil-correo">@Model.Correo</p>
-
-        <div class="divider"></div>
-
-        <div class="perfil-dato" style="width:100%">
-            <label>Miembro desde</label>
-            <span>@Model.FechaRegistro.ToString("dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-DO"))</span>
-        </div>
-
         @{
             /* Helpers de reputación */
             var rep = Model.Reputacion;
@@ -307,6 +398,18 @@
                 BarrioInteligenteWeb.Models.NivelReputacion.Critica   => "Tu cuenta está en estado crítico",
                 _ => "Estado de reputación desconocido"
             };
+            // ── Anillo del avatar ──
+            string avatarRingClass = rep switch {
+                BarrioInteligenteWeb.Models.NivelReputacion.Excelente => "avatar-excellent",
+                BarrioInteligenteWeb.Models.NivelReputacion.Buena     => "avatar-buena",
+                BarrioInteligenteWeb.Models.NivelReputacion.Regular   => "avatar-regular",
+                BarrioInteligenteWeb.Models.NivelReputacion.Mala      => "avatar-mala",
+                BarrioInteligenteWeb.Models.NivelReputacion.Critica   => "avatar-critica",
+                _ => ""
+            };
+            bool isExcelente = rep == BarrioInteligenteWeb.Models.NivelReputacion.Excelente;
+            bool hasBadge = rep == BarrioInteligenteWeb.Models.NivelReputacion.Excelente
+                         || rep == BarrioInteligenteWeb.Models.NivelReputacion.Buena;
             string repColor = rep switch {
                 BarrioInteligenteWeb.Models.NivelReputacion.Excelente => "#16a34a",
                 BarrioInteligenteWeb.Models.NivelReputacion.Buena     => "#22c55e",
@@ -327,7 +430,6 @@
                 ? "Gracias por respetar las normas comunitarias y contribuir al bienestar del barrio."
                 : Model.MotivoReputacion;
             int repIdx = (int)rep; /* 0=Excelente … 4=Critica */
-
             /* Datos de cada paso del stepper */
             var steps = new[]
             {
@@ -338,6 +440,55 @@
                 new { Label = "Crítica",   Cls = "rep-critica",    LineCls = "rep-line-inactive"  }
             };
         }
+
+        <!-- Avatar tap-to-upload envuelto en avatar-wrapper con anillo -->
+        <form asp-controller="Account" asp-action="SubirFoto" method="post" enctype="multipart/form-data" id="fotoForm">
+            @Html.AntiForgeryToken()
+            <input type="file" id="fotoInput" name="foto" accept="image/jpeg,image/png,image/webp"
+                   style="display:none" />
+            <div class="avatar-wrapper @avatarRingClass" id="avatarWrapper" title="Ver insignia">
+                <div class="avatar-grande" id="avatarGrande">
+                    @if (!string.IsNullOrEmpty(Model.FotoPerfil))
+                    {
+                        <img id="avatarPreview" src="@Model.FotoPerfil" alt="Foto de perfil" />
+                    }
+                    else
+                    {
+                        <svg id="avatarSvg" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="44" height="44">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
+                        </svg>
+                        <img id="avatarPreview" src="" alt="" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%;" />
+                    }
+                    <div class="avatar-overlay">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="white" width="22" height="22">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/>
+                        </svg>
+                    </div>
+                </div>
+                @if (isExcelente)
+                {
+                    <!-- Insignia estrella dorada para Excelente -->
+                    <div class="avatar-badge" title="Ciudadano Excelente">⭐</div>
+                }
+                else if (hasBadge)
+                {
+                    <!-- Insignia escudo azul para Buena -->
+                    <div class="avatar-badge" style="background: linear-gradient(135deg,#3b82f6,#2563eb);" title="Buena Reputación">🛡</div>
+                }
+            </div>
+        </form>
+        <p class="foto-hint">Toca para ver insignia · Mantén para cambiar foto</p>
+
+        <p class="perfil-nombre">@Model.NombreCompleto</p>
+        <p class="perfil-correo">@Model.Correo</p>
+
+        <div class="divider"></div>
+
+        <div class="perfil-dato" style="width:100%">
+            <label>Miembro desde</label>
+            <span>@Model.FechaRegistro.ToString("dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-DO"))</span>
+        </div>
+
 
         <!-- ── TARJETA REPUTACIÓN CIUDADANA ── -->
         <div class="rep-card">
@@ -428,18 +579,127 @@
             </svg>
             <span>Comunidad</span>
         </a>
-    </nav>
+    
+          <a href="@Url.Action("Dashboard", "Reportes")">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+              </svg>
+              <span>Panel</span>
+          </a>
+      </nav>
 
 </div>
+
+<!-- ── Modal Insignia de Reputación ── -->
+<div class="badge-modal-overlay" id="badgeModal">
+    <div class="badge-modal">
+        <div class="badge-modal-icon" id="badgeModalIcon" style="background:#dcfce7;">⭐</div>
+        <p class="badge-modal-title" id="badgeModalTitle">Insignia de Ciudadano Excelente</p>
+        <p class="badge-modal-desc" id="badgeModalDesc">Gracias por contribuir al bienestar del barrio.</p>
+        <button class="badge-modal-close" id="badgeModalClose">Entendido</button>
+    </div>
+</div>
+
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    // ─── Datos de insignias por nivel ───
+    const insignias = {
+        'excelente': {
+            icon: '⭐',
+            iconBg: 'linear-gradient(135deg,#fbbf24,#16a34a)',
+            title: 'Insignia de Ciudadano Excelente',
+            desc: 'Tu participación sobresaliente fortalece el bienestar colectivo. Sigues siendo un pilar fundamental de este barrio. ¡Gracias por tu compromiso!'
+        },
+        'buena': {
+            icon: '🛡',
+            iconBg: 'linear-gradient(135deg,#3b82f6,#2563eb)',
+            title: 'Insignia de Ciudadano con Buena Reputación',
+            desc: 'Tienes una buena reputación en la comunidad. Sigue reportando problemas y participando para alcanzar el nivel Excelente.'
+        },
+        'regular': {
+            icon: '💬',
+            iconBg: '#fef9c3',
+            title: 'Reputación Regular',
+            desc: 'Tu reputación es regular. Participa más activamente — reporta problemas, valida reportes de otros y mantén un comportamiento positivo.'
+        },
+        'mala': {
+            icon: '⚠️',
+            iconBg: '#ffedd5',
+            title: 'Reputación necesita mejorar',
+            desc: 'Tu reputación requiere atención. Evita reportes duplicados o erróneos y ayuda a otros ciudadanos para subir tu puntuación.'
+        },
+        'critica': {
+            icon: '🚨',
+            iconBg: '#fee2e2',
+            title: 'Estado Crítico',
+            desc: 'Tu cuenta está en estado crítico. Participa positivamente en la comunidad para recuperar tu reputación y acceder a más funciones.'
+        }
+    };
+    const nivelActual = '@rep.ToString().ToLower()';
+
+    // ─── Avatar wrapper: clic corto → modal, long press → upload ───
+    const wrapper = document.getElementById('avatarWrapper');
     const fotoInput = document.getElementById('fotoInput');
+    let pressTimer = null;
+
+    if (wrapper) {
+        wrapper.addEventListener('mousedown', () => {
+            pressTimer = setTimeout(() => {
+                pressTimer = null;
+                fotoInput.click();
+            }, 600);
+        });
+        wrapper.addEventListener('mouseup', () => { clearTimeout(pressTimer); });
+        wrapper.addEventListener('mouseleave', () => { clearTimeout(pressTimer); });
+
+        // Toque en móvil
+        wrapper.addEventListener('touchstart', () => {
+            pressTimer = setTimeout(() => {
+                pressTimer = null;
+                fotoInput.click();
+            }, 600);
+        }, { passive: true });
+        wrapper.addEventListener('touchend', (e) => {
+            if (pressTimer) {
+                clearTimeout(pressTimer);
+                // Tap corto → abrir modal
+                e.preventDefault();
+                abrirModal();
+            }
+        });
+
+        // Click en escritorio = abrir modal (upload sólo con long-press)
+        wrapper.addEventListener('click', (e) => {
+            if (pressTimer) {
+                clearTimeout(pressTimer);
+                abrirModal();
+            }
+        });
+    }
+
+    function abrirModal() {
+        const data = insignias[nivelActual] || insignias['regular'];
+        document.getElementById('badgeModalIcon').textContent = data.icon;
+        document.getElementById('badgeModalIcon').style.background = data.iconBg;
+        document.getElementById('badgeModalTitle').textContent = data.title;
+        document.getElementById('badgeModalDesc').textContent = data.desc;
+        document.getElementById('badgeModal').classList.add('open');
+    }
+
+    document.getElementById('badgeModalClose').addEventListener('click', () => {
+        document.getElementById('badgeModal').classList.remove('open');
+    });
+    document.getElementById('badgeModal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('badgeModal'))
+            document.getElementById('badgeModal').classList.remove('open');
+    });
+
+    // ─── Upload foto ───
     if (fotoInput) {
         fotoInput.addEventListener('change', function () {
             if (this.files && this.files[0]) {
                 const reader = new FileReader();
                 reader.onload = function (e) {
-                    // Si ya hay img visible, actualiza su src
                     const preview = document.getElementById('avatarPreview');
                     const svg = document.getElementById('avatarSvg');
                     if (preview) {
@@ -449,7 +709,6 @@
                     }
                 };
                 reader.readAsDataURL(this.files[0]);
-                // Envía el form automáticamente tras seleccionar
                 document.getElementById('fotoForm').submit();
             }
         });
