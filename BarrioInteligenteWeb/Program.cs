@@ -27,8 +27,9 @@ try
     var builder = WebApplication.CreateBuilder(args);
     builder.Host.UseSerilog();
 
+    // ── DEMO MODE: InMemory en vez de SQL Server ──
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
-        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+        options.UseInMemoryDatabase("BarrioInteligenteDemo"));
 
     builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
         .AddCookie(options =>
@@ -58,6 +59,14 @@ try
     builder.Services.AddSignalR();
 
     var app = builder.Build();
+
+    // ── Seed demo data ──
+    using (var scope = app.Services.CreateScope())
+    {
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        context.Database.EnsureCreated();
+        DemoDataSeeder.Seed(context);
+    }
 
     // Debe ir primero: transforma los headers X-Forwarded-* antes que el resto del pipeline
     app.UseForwardedHeaders();
