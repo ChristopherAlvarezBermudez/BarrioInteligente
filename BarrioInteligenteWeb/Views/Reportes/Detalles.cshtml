@@ -77,6 +77,209 @@
             flex-shrink: 0;
             cursor: pointer;
         }
+
+        /* ── Nombres clickeables ── */
+        .user-clickable {
+            cursor: pointer;
+            transition: color 0.15s;
+        }
+        .user-clickable:hover { color: #3b82f6 !important; }
+
+        /* ── Modal Overlay ── */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 9998;
+            align-items: flex-end;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+        .modal-overlay.active {
+            display: flex;
+            animation: fadeIn 0.2s ease;
+        }
+
+        /* ── Modal Sheet ── */
+        .modal-sheet {
+            background: #fff;
+            width: 100%;
+            max-width: 430px;
+            border-radius: 20px 20px 0 0;
+            padding: 0;
+            max-height: 85vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s cubic-bezier(0.16,1,0.3,1);
+        }
+        .modal-handle {
+            width: 36px;
+            height: 4px;
+            background: #ddd;
+            border-radius: 4px;
+            margin: 10px auto 0;
+        }
+
+        /* ── Perfil ── */
+        .modal-profile {
+            text-align: center;
+            padding: 20px 24px 16px;
+        }
+        .modal-avatar {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: #f0f0f0;
+            margin: 0 auto 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: 700;
+            color: #555;
+            overflow: hidden;
+        }
+        .modal-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .modal-user-name {
+            font-size: 18px;
+            font-weight: 800;
+            color: #111;
+            margin: 0 0 6px;
+        }
+        .modal-badge-rep {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 14px;
+            border-radius: 20px;
+            margin-bottom: 8px;
+        }
+        .rep-excelente { background: #ecfdf5; color: #059669; border: 1.5px solid #6ee7b7; }
+        .rep-buena     { background: #eff6ff; color: #2563eb; border: 1.5px solid #93c5fd; }
+        .rep-regular   { background: #fffbeb; color: #d97706; border: 1.5px solid #fcd34d; }
+        .rep-mala      { background: #fff1f2; color: #e11d48; border: 1.5px solid #fda4af; }
+        .rep-critica   { background: #fef2f2; color: #dc2626; border: 1.5px solid #fca5a5; }
+        .modal-member-since {
+            font-size: 11px;
+            color: #aaa;
+        }
+
+        /* ── Botón Reportar ── */
+        .btn-reportar-usuario {
+            width: calc(100% - 48px);
+            margin: 0 24px 16px;
+            padding: 14px;
+            border-radius: 14px;
+            border: 2px solid #fca5a5;
+            background: #fff;
+            color: #dc2626;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        .btn-reportar-usuario:hover {
+            background: #fef2f2;
+        }
+
+        /* ── Formulario Denuncia ── */
+        .denuncia-form {
+            display: none;
+            padding: 0 24px 24px;
+        }
+        .denuncia-form.active { display: block; }
+        .denuncia-form h4 {
+            font-size: 15px;
+            font-weight: 700;
+            margin: 0 0 14px;
+            color: #111;
+        }
+        .denuncia-select {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 2px solid #e5e7eb;
+            font-size: 13px;
+            font-weight: 600;
+            color: #111;
+            background: #f9fafb;
+            outline: none;
+            appearance: none;
+            margin-bottom: 12px;
+            cursor: pointer;
+        }
+        .denuncia-select:focus { border-color: #dc2626; }
+        .denuncia-textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 2px solid #e5e7eb;
+            font-size: 13px;
+            font-family: 'Inter', sans-serif;
+            color: #111;
+            background: #f9fafb;
+            resize: none;
+            outline: none;
+            min-height: 70px;
+            margin-bottom: 14px;
+        }
+        .denuncia-textarea:focus { border-color: #dc2626; }
+        .btn-enviar-denuncia {
+            width: 100%;
+            padding: 14px;
+            border-radius: 14px;
+            border: none;
+            background: #dc2626;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-enviar-denuncia:hover { background: #b91c1c; }
+        .btn-enviar-denuncia:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* ── Toast ── */
+        .toast-denuncia {
+            position: fixed;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 22px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 600;
+            z-index: 99999;
+            display: none;
+            white-space: nowrap;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+        }
+        .toast-denuncia.success { background: #065f46; color: #fff; }
+        .toast-denuncia.error   { background: #dc2626; color: #fff; }
+        .toast-denuncia.visible {
+            display: block;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @@keyframes slideUp {
+            from { transform: translateY(100%); }
+            to   { transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
@@ -116,6 +319,12 @@
                 </svg>
                 @estado
             </span>
+            @if (ViewBag.EsAdmin != null && (bool)ViewBag.EsAdmin)
+            {
+                <button class="btn btn-sm btn-danger ms-2" onclick="deleteContent(@Model.Reporte.Id, 'Reporte')" title="Eliminar Reporte completo" style="border-radius:12px;">
+                    <i class="bi bi-trash-fill"></i> Eliminar
+                </button>
+            }
         </div>
     </div>
 
@@ -145,7 +354,7 @@
                     var totalLikes = comentario.Likes?.Count ?? 0;
                     var estaLikeado = comentario.Likes?.Any(l => l.UsuarioId == currentUserId) ?? false;
                     <div class="comment-item">
-                        <div class="avatar-wrapper @comRingClass">
+                        <div class="avatar-wrapper @comRingClass user-clickable" data-user-id="@comentario.UsuarioId" title="Ver perfil de @comNombre">
                             <div class="comment-avatar">
                                 @if (!string.IsNullOrEmpty(comentario.Usuario?.FotoPerfil))
                                 {
@@ -167,7 +376,15 @@
                             }
                         </div>
                         <div class="comment-content">
-                            <p class="comment-user">@comNombre</p>
+                            <p class="comment-user user-clickable" data-user-id="@comentario.UsuarioId">
+                                @comNombre
+                                @if (ViewBag.EsAdmin != null && (bool)ViewBag.EsAdmin)
+                                {
+                                    <button class="btn btn-sm text-danger p-0 ms-2" onclick="deleteContent(@comentario.Id, 'Comentario')" title="Eliminar Comentario" style="border:none;background:none;">
+                                        <i class="bi bi-trash-fill"></i>
+                                    </button>
+                                }
+                            </p>
                             <p class="comment-text">@comentario.Texto</p>
                         </div>
                         
@@ -257,9 +474,244 @@
       </nav>
 
 </div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- MODAL: Perfil de Usuario + Denuncia       -->
+<!-- ══════════════════════════════════════════ -->
+<div class="modal-overlay" id="modalPerfilOverlay">
+    <div class="modal-sheet">
+        <div class="modal-handle"></div>
+
+        <!-- Perfil -->
+        <div class="modal-profile" id="modalPerfilContent">
+            <div class="modal-avatar" id="modalAvatar">
+                <span id="modalAvatarInicial">?</span>
+            </div>
+            <p class="modal-user-name" id="modalUserName">Cargando...</p>
+            <span class="modal-badge-rep" id="modalBadgeRep"></span>
+            <p class="modal-member-since" id="modalMemberSince"></p>
+        </div>
+
+        <!-- Botón Reportar -->
+        <button class="btn-reportar-usuario" id="btnMostrarDenuncia">
+            🚩 Reportar Usuario
+        </button>
+
+        @if (ViewBag.EsAdmin != null && (bool)ViewBag.EsAdmin)
+        {
+            <div style="padding: 0 24px 20px;">
+                <hr style="border-color:#eee;"/>
+                <h6 style="font-weight:700; color:#dc2626; font-size:13px; text-transform:uppercase; margin-bottom:12px;">👑 Herramientas de Admin</h6>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <button class="btn btn-dark w-100 fw-bold" onclick="resetearReputacionModal()">
+                        <i class="bi bi-arrow-counterclockwise"></i> Resetear Reputación (a 100 pts)
+                    </button>
+                    <a href="/Admin/Panel" class="btn btn-outline-dark w-100 fw-bold">
+                        <i class="bi bi-award"></i> Asignar Insignia
+                    </a>
+                    <button class="btn btn-outline-danger w-100 fw-bold" onclick="alert('Historial de denuncias en construcción. Redirigiendo al panel.'); window.location.href='/Admin/Panel';">
+                        <i class="bi bi-card-list"></i> Ver Denuncias Previas
+                    </button>
+                </div>
+            </div>
+        }
+
+        <!-- Formulario de Denuncia (oculto por defecto) -->
+        <div class="denuncia-form" id="denunciaForm">
+            <h4>¿Por qué reportas a este usuario?</h4>
+            <select class="denuncia-select" id="denunciaMotivo">
+                <option value="" disabled selected>Selecciona un motivo...</option>
+                <option value="Spam">📢 Spam o publicidad</option>
+                <option value="Comportamiento indebido">😤 Comportamiento indebido</option>
+                <option value="Contenido ofensivo">🤬 Contenido ofensivo</option>
+                <option value="Información falsa">❌ Información falsa</option>
+                <option value="Acoso">⚠️ Acoso o intimidación</option>
+                <option value="Otro">📝 Otro</option>
+            </select>
+            <textarea class="denuncia-textarea" id="denunciaDescripcion" placeholder="Describe brevemente lo ocurrido (opcional)..."></textarea>
+            <button class="btn-enviar-denuncia" id="btnEnviarDenuncia" disabled>Enviar Denuncia</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast de feedback -->
+<div class="toast-denuncia" id="toastDenuncia"></div>
+
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
+
+        // ═════════════════════════════════════════
+        // SISTEMA DE MODAL DE PERFIL + DENUNCIA
+        // ═════════════════════════════════════════
+        const modalOverlay = document.getElementById('modalPerfilOverlay');
+        const modalAvatar = document.getElementById('modalAvatar');
+        const modalAvatarInicial = document.getElementById('modalAvatarInicial');
+        const modalUserName = document.getElementById('modalUserName');
+        const modalBadgeRep = document.getElementById('modalBadgeRep');
+        const modalMemberSince = document.getElementById('modalMemberSince');
+        const btnMostrarDenuncia = document.getElementById('btnMostrarDenuncia');
+        const denunciaForm = document.getElementById('denunciaForm');
+        const denunciaMotivo = document.getElementById('denunciaMotivo');
+        const denunciaDescripcion = document.getElementById('denunciaDescripcion');
+        const btnEnviarDenuncia = document.getElementById('btnEnviarDenuncia');
+        const toastDenuncia = document.getElementById('toastDenuncia');
+
+        let usuarioReportadoId = null;
+
+        // Abrir modal al hacer clic en nombre o avatar
+        document.querySelectorAll('.user-clickable').forEach(el => {
+            el.addEventListener('click', async function (e) {
+                e.stopPropagation();
+                const userId = this.dataset.userId;
+                if (!userId) return;
+
+                usuarioReportadoId = parseInt(userId);
+                denunciaForm.classList.remove('active');
+                denunciaMotivo.value = '';
+                denunciaDescripcion.value = '';
+                btnEnviarDenuncia.disabled = true;
+
+                // Mostrar modal con loading
+                modalUserName.textContent = 'Cargando...';
+                modalBadgeRep.textContent = '';
+                modalMemberSince.textContent = '';
+                modalAvatarInicial.textContent = '...';
+                modalAvatar.innerHTML = '<span id="modalAvatarInicial">...</span>';
+                modalOverlay.classList.add('active');
+
+                try {
+                    const resp = await fetch(`@Url.Action("ObtenerPerfilPublico", "Denuncias")?id=${userId}`);
+                    const json = await resp.json();
+
+                    if (json.success) {
+                        const u = json.data;
+                        modalUserName.textContent = u.nombre;
+                        modalMemberSince.textContent = `Miembro desde ${u.miembro}`;
+
+                        // Avatar
+                        if (u.foto) {
+                            modalAvatar.innerHTML = `<img src="${u.foto}" alt="${u.nombre}" />`;
+                        } else {
+                            const inicial = u.nombre.charAt(0).toUpperCase();
+                            modalAvatar.innerHTML = `<span style="font-size:28px;font-weight:700;color:#555;">${inicial}</span>`;
+                        }
+
+                        // Badge de reputación
+                        const nivelMap = {
+                            'Excelente': { emoji: '⭐', cls: 'rep-excelente', label: 'Ciudadano Excelente' },
+                            'Buena':     { emoji: '🛡️', cls: 'rep-buena',     label: 'Buena Reputación' },
+                            'Regular':   { emoji: '⚖️', cls: 'rep-regular',   label: 'Reputación Regular' },
+                            'Mala':      { emoji: '⚠️', cls: 'rep-mala',      label: 'Reputación Baja' },
+                            'Critica':   { emoji: '🔴', cls: 'rep-critica',   label: 'Reputación Crítica' }
+                        };
+                        const info = nivelMap[u.nivel] || nivelMap['Regular'];
+                        modalBadgeRep.className = `modal-badge-rep ${info.cls}`;
+                        modalBadgeRep.innerHTML = `${info.emoji} ${info.label}`;
+                    } else {
+                        modalUserName.textContent = 'Usuario no encontrado';
+                    }
+                } catch (err) {
+                    console.error('[Modal] Error:', err);
+                    modalUserName.textContent = 'Error al cargar perfil';
+                }
+            });
+        });
+
+        // Cerrar modal al tocar overlay
+        modalOverlay.addEventListener('click', function (e) {
+            if (e.target === modalOverlay) {
+                modalOverlay.classList.remove('active');
+            }
+        });
+
+        // Mostrar formulario de denuncia
+        btnMostrarDenuncia.addEventListener('click', function () {
+            denunciaForm.classList.toggle('active');
+        });
+
+        // Habilitar botón cuando se selecciona motivo
+        denunciaMotivo.addEventListener('change', function () {
+            btnEnviarDenuncia.disabled = !this.value;
+        });
+
+        // Enviar denuncia
+        btnEnviarDenuncia.addEventListener('click', async function () {
+            if (!usuarioReportadoId || !denunciaMotivo.value) return;
+
+            this.disabled = true;
+            this.textContent = 'Enviando...';
+
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            try {
+                const formData = new FormData();
+                formData.append('usuarioReportadoId', usuarioReportadoId);
+                formData.append('motivo', denunciaMotivo.value);
+                formData.append('descripcion', denunciaDescripcion.value.trim());
+
+                const resp = await fetch('@Url.Action("ReportarPerfil", "Denuncias")', {
+                    method: 'POST',
+                    headers: { 'RequestVerificationToken': token },
+                    body: formData
+                });
+
+                const data = await resp.json();
+
+                // Cerrar modal
+                modalOverlay.classList.remove('active');
+
+                // Mostrar toast
+                showToast(
+                    data.success
+                        ? '✅ Denuncia enviada. El equipo de moderación (Chris) ha sido notificado.'
+                        : `⚠️ ${data.message}`,
+                    data.success ? 'success' : 'error'
+                );
+            } catch (err) {
+                console.error('[Denuncia] Error:', err);
+                showToast('❌ Error de conexión al enviar la denuncia.', 'error');
+            } finally {
+                this.disabled = false;
+                this.textContent = 'Enviar Denuncia';
+            }
+        });
+
+        @if (ViewBag.EsAdmin != null && (bool)ViewBag.EsAdmin)
+        {
+            <text>
+            window.resetearReputacionModal = async function() {
+                if(!usuarioReportadoId) return;
+                if(!confirm('¿Estás seguro de que quieres resetear la reputación de este usuario a 100 puntos (Excelente)?')) return;
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                const fd = new FormData();
+                fd.append('usuarioId', usuarioReportadoId);
+                fd.append('puntosForm', 100);
+                try {
+                    const res = await fetch('/Admin/AjustarReputacion', {
+                        method: 'POST', headers: { 'RequestVerificationToken': token }, body: fd
+                    });
+                    const result = await res.json();
+                    if(result.success) {
+                        showToast('Reputación reseteada a 100.', 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showToast('Error: ' + result.message, 'error');
+                    }
+                }catch(e) { console.error(e); }
+            };
+            </text>
+        }
+
+        function showToast(msg, type) {
+            toastDenuncia.textContent = msg;
+            toastDenuncia.className = `toast-denuncia ${type} visible`;
+            setTimeout(() => { toastDenuncia.classList.remove('visible'); }, 4000);
+        }
+
+        // ═════════════════════════════════════════
+        // LIKES DE COMENTARIOS (existente)
+        // ═════════════════════════════════════════
         const likeButtons = document.querySelectorAll('.btn-like-comentario');
         
         likeButtons.forEach(btn => {
@@ -354,13 +806,11 @@
                             spanConteo.textContent = data.nuevoConteo;
 
                             if (data.estaConfirmado) {
-                                // Cambiar a estado activo
                                 icono.classList.remove('bi-heart');
                                 icono.classList.add('bi-heart-fill', 'text-danger');
                                 textoContador.classList.add('text-danger', 'fw-bold');
                                 textoEstado.textContent = 'Confirmado';
                             } else {
-                                // Cambiar a estado inactivo
                                 icono.classList.remove('bi-heart-fill', 'text-danger');
                                 icono.classList.add('bi-heart');
                                 textoContador.classList.remove('text-danger', 'fw-bold');
@@ -376,6 +826,31 @@
             });
         }
     });
+
+    async function deleteContent(id, tipo) {
+        if (!confirm('¿Seguro que deseas eliminar este ' + tipo.toLowerCase() + ' de la plataforma?')) return;
+        const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+        const formData = new FormData();
+        formData.append('id', id);
+        formData.append('tipo', tipo);
+
+        try {
+            const res = await fetch('/Admin/EliminarContenido', {
+                method: 'POST', headers: { 'RequestVerificationToken': token }, body: formData
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert(data.message);
+                if(tipo === 'Reporte') {
+                    window.location.href = '/Reportes/Index';
+                } else {
+                    location.reload();
+                }
+            } else {
+                alert(data.message);
+            }
+        } catch(e) { console.error(e); }
+    }
 </script>
 </body>
 </html>

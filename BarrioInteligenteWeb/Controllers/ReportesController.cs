@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using BarrioInteligenteWeb.Data;
 using BarrioInteligenteWeb.Models;
+using BarrioInteligenteWeb.Services;
 using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
 using BarrioInteligenteWeb.Hubs;
@@ -17,17 +18,20 @@ namespace BarrioInteligenteWeb.Controllers
         private readonly IWebHostEnvironment _env;
         private readonly ILogger<ReportesController> _logger;
         private readonly IHubContext<ReportesHub> _hubContext;
+        private readonly IProfanityService _profanityService;
 
         public ReportesController(
             ApplicationDbContext context,
             IWebHostEnvironment env,
             ILogger<ReportesController> logger,
-            IHubContext<ReportesHub> hubContext)
+            IHubContext<ReportesHub> hubContext,
+            IProfanityService profanityService)
         {
             _context = context;
             _env = env;
             _logger = logger;
             _hubContext = hubContext;
+            _profanityService = profanityService;
         }
 
         private int UsuarioActualId =>
@@ -157,6 +161,10 @@ namespace BarrioInteligenteWeb.Controllers
                     .Where(u => u.Id == UsuarioActualId)
                     .Select(u => u.FotoPerfil)
                     .FirstOrDefault();
+
+                var usuarioLocal = _context.Usuarios.FirstOrDefault(u => u.Id == UsuarioActualId);
+                ViewBag.EsAdmin = usuarioLocal != null && usuarioLocal.EsAdmin;
+
                 return View(lista);
             }
             catch (Exception ex)
@@ -175,12 +183,27 @@ namespace BarrioInteligenteWeb.Controllers
             return View();
         }
 
+        private bool EsUbicacionValida(double lat, double lng)
+        {
+            return lat >= 17.5 && lat <= 20.0 && lng >= -72.0 && lng <= -68.3;
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Crear(Reporte reporte, IFormFile? imagen)
         {
             try
             {
+                if (!EsUbicacionValida(reporte.Latitud, reporte.Longitud))
+                {
+                    ModelState.AddModelError(string.Empty, "Barrio Inteligente actualmente solo opera dentro del territorio de la República Dominicana.");
+                    ViewBag.FotoPerfil = _context.Usuarios
+                        .Where(u => u.Id == UsuarioActualId)
+                        .Select(u => u.FotoPerfil)
+                        .FirstOrDefault();
+                    return View(reporte);
+                }
+
                 reporte.UsuarioId = UsuarioActualId;
                 reporte.Fecha = DateTime.Now;
 
@@ -215,6 +238,14 @@ namespace BarrioInteligenteWeb.Controllers
                 ModelState.Remove("Usuario");
                 if (ModelState.IsValid)
                 {
+                    // ── Filtro de profanidades en descripción ANTES de guardar ──
+                    if (!string.IsNullOrWhiteSpace(reporte.Descripcion))
+                    {
+                        var filtroDesc = await _profanityService.ValidarYCensurarAsync(
+                            reporte.Descripcion, UsuarioActualId);
+                        reporte.Descripcion = filtroDesc.TextoCensurado;
+                    }
+
                     _context.Reportes.Add(reporte);
                     await _context.SaveChangesAsync();
 
@@ -237,6 +268,9 @@ namespace BarrioInteligenteWeb.Controllers
         {
             try
             {
+                var usuarioLocal = _context.Usuarios.FirstOrDefault(u => u.Id == UsuarioActualId);
+                ViewBag.EsAdmin = usuarioLocal != null && usuarioLocal.EsAdmin;
+                ViewBag.UsuarioId = UsuarioActualId;
                 var reporte = _context.Reportes
                     .Include(r => r.Usuario)
                     .FirstOrDefault(r => r.Id == id);
@@ -362,11 +396,16 @@ namespace BarrioInteligenteWeb.Controllers
             {
                 if (!string.IsNullOrWhiteSpace(texto))
                 {
+                    // ── Filtro de profanidades ANTES de persistir ──
+                    var filtro = await _profanityService.ValidarYCensurarAsync(
+                        texto.Trim(), UsuarioActualId);
+                    var textoFinal = filtro.TextoCensurado;
+
                     _context.Comentarios.Add(new Comentario
                     {
                         ReporteId = reporteId,
                         UsuarioId = UsuarioActualId,
-                        Texto = texto.Trim(),
+                        Texto = textoFinal,
                         Fecha = DateTime.Now
                     });
                     await _context.SaveChangesAsync();
@@ -409,7 +448,7 @@ namespace BarrioInteligenteWeb.Controllers
                     {
                         lat = r.Latitud,
                         lng = r.Longitud,
-                        intensidad = r.Upvotes > 0 ? r.Upvotes * 5.0 : 1.0,
+                        intensidad = 1.0, // Peso uniforme estilo Snap Map: la intensidad la define la densidad geográfica
                         id = r.Id,
                         titulo = r.Titulo,
                         direccion = r.DireccionFisica,

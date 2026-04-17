@@ -1,0 +1,178 @@
+@model IEnumerable<BarrioInteligenteWeb.Models.Usuario>
+@{
+    ViewData["Title"] = "Panel de Control";
+    var insigniasDisponibles = ViewBag.InsigniasDisponibles as List<BarrioInteligenteWeb.Models.Insignia>;
+}
+
+<div class="container py-5">
+    <h1 class="mb-4 text-danger"><i class="bi bi-shield-lock-fill"></i> Panel de Control (Admin)</h1>
+
+    <div class="card shadow-sm border-0 rounded-4">
+        <div class="card-body p-0">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Usuario</th>
+                        <th>Reputación</th>
+                        <th>Insignias</th>
+                        <th class="text-end pe-4">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var u in Model)
+                    {
+                        <tr>
+                            <td class="ps-4">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div style="width:40px;height:40px;border-radius:50%;background:#eee;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#555;">
+                                        @(string.IsNullOrEmpty(u.FotoPerfil) ? u.NombreCompleto.Substring(0,1).ToUpper() : $"<img src='{u.FotoPerfil}' style='width:100%;height:100%;border-radius:50%;object-fit:cover;' />")
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 fw-bold">@u.NombreCompleto</h6>
+                                        <small class="text-muted">@u.Correo</small>
+                                        @if(u.EsAdmin){ <span class="badge bg-danger ms-2">Admin</span> }
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div><strong>@u.PuntosReputacion pts</strong></div>
+                                <span class="badge" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;">@u.Reputacion.ToString()</span>
+                            </td>
+                            <td id="insignias-@u.Id">
+                                @if (u.Insignias.Any())
+                                {
+                                    foreach (var i in u.Insignias)
+                                    {
+                                        <span class="badge rounded-pill me-1 mb-1 badge-insignia" data-id="@i.Id" style="background-color:@i.ColorCss;color:#fff;">
+                                            @i.IconoEmoji @i.Nombre
+                                        </span>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">Ninguna</span>
+                                }
+                            </td>
+                            <td class="text-end pe-4">
+                                <button class="btn btn-sm btn-outline-secondary rounded-3" onclick="openAdminModal(@u.Id, '@u.NombreCompleto', @u.PuntosReputacion)">
+                                    <i class="bi bi-gear-fill"></i> Gestionar
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Gestión Admin -->
+<div class="modal fade" id="gestionModal" tabIndex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 border-0 shadow-lg">
+      <div class="modal-header border-bottom-0 pb-0">
+        <h5 class="modal-title fw-bold">Gestionar <span id="mNombre" class="text-primary"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        
+        <form id="formReputacion">
+            <h6 class="fw-bold mb-3">Puntos de Reputación</h6>
+            <div class="input-group mb-4">
+                <input type="hidden" id="mUsuarioId" />
+                <input type="number" class="form-control" id="mPuntos" />
+                <button class="btn btn-dark" type="button" onclick="guardarReputacion()">Ajustar Puntos</button>
+            </div>
+        </form>
+
+        <h6 class="fw-bold mb-3">Insignias</h6>
+        <div class="d-flex flex-wrap gap-2">
+            @foreach(var i in insigniasDisponibles)
+            {
+                <button class="btn btn-sm btn-outline-dark rounded-pill btn-toggle-ins" onclick="toggleInsignia(@i.Id, this)" data-ins-id="@i.Id">
+                    @i.IconoEmoji @i.Nombre
+                </button>
+            }
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+@section Scripts {
+<script>
+    let currentUserId = null;
+    const modal = new bootstrap.Modal(document.getElementById('gestionModal'));
+
+    function openAdminModal(id, nombre, puntos) {
+        currentUserId = id;
+        document.getElementById('mUsuarioId').value = id;
+        document.getElementById('mNombre').textContent = nombre;
+        document.getElementById('mPuntos').value = puntos;
+
+        // Reset badge buttons
+        document.querySelectorAll('.btn-toggle-ins').forEach(btn => btn.classList.remove('active', 'btn-dark'));
+        
+        // Poner activos los que el usuario ya tiene según el DOM
+        const insigniasCelda = document.getElementById(`insignias-${id}`);
+        insigniasCelda.querySelectorAll('.badge-insignia').forEach(badge => {
+            const insId = badge.getAttribute('data-id');
+            const bt = document.querySelector(`.btn-toggle-ins[data-ins-id="${insId}"]`);
+            if(bt) {
+                bt.classList.add('active', 'btn-dark');
+                bt.classList.remove('btn-outline-dark');
+            }
+        });
+
+        modal.show();
+    }
+
+    async function guardarReputacion() {
+        if(!currentUserId) return;
+        const puntos = document.getElementById('mPuntos').value;
+        const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+        const fd = new FormData();
+        fd.append('usuarioId', currentUserId);
+        fd.append('puntosForm', puntos);
+
+        try {
+            const res = await fetch('@Url.Action("AjustarReputacion", "Admin")', {
+                method: 'POST', headers: { 'RequestVerificationToken': token }, body: fd
+            });
+            const data = await res.json();
+            if(data.success) {
+                alert('Reputación ajustada correctamente.');
+                location.reload(); // Recarga simple para UI consistente
+            } else { alert(data.message); }
+        }catch(e){}
+    }
+
+    async function toggleInsignia(insigniaId, btn) {
+        if(!currentUserId) return;
+        const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+        const fd = new FormData();
+        fd.append('usuarioId', currentUserId);
+        fd.append('insigniaId', insigniaId);
+
+        try {
+            const res = await fetch('@Url.Action("ToggleInsignia", "Admin")', {
+                method: 'POST', headers: { 'RequestVerificationToken': token }, body: fd
+            });
+            const data = await res.json();
+            if(data.success) {
+                if(data.agregada) {
+                    btn.classList.add('active', 'btn-dark');
+                    btn.classList.remove('btn-outline-dark');
+                } else {
+                    btn.classList.remove('active', 'btn-dark');
+                    btn.classList.add('btn-outline-dark');
+                }
+            } else { alert(data.message); }
+        }catch(e){ console.error(e); }
+    }
+</script>
+}

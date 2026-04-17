@@ -36,5 +36,7 @@ namespace BarrioInteligenteWeb.Models
         public Usuario? Usuario { get; set; }
 
         public virtual ICollection<Validacion> Validaciones { get; set; } = new List<Validacion>();
+
+        public bool EsEliminado { get; set; } = false;
     }
 }

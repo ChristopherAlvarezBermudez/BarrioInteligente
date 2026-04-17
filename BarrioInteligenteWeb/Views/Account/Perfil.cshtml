@@ -540,6 +540,34 @@
             </div>
         </div>
 
+        <!-- ── Insignias Especiales ── -->
+        @if (Model.Insignias != null && Model.Insignias.Any())
+        {
+            <div class="rep-card" style="margin-top:12px;">
+                <p class="rep-title" style="margin-bottom:12px;">Desbloqueadas</p>
+                <div class="d-flex flex-wrap gap-2">
+                    @foreach (var ins in Model.Insignias)
+                    {
+                        <span class="badge rounded-pill px-3 py-2" style="background-color:@ins.ColorCss;color:#fff;font-size:13px;font-weight:600;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                            @ins.IconoEmoji @ins.Nombre
+                        </span>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (Model.EsAdmin)
+        {
+            <div style="width: 100%; margin-top: 10px;">
+                <a href="@Url.Action("Panel", "Admin")" class="btn btn-danger w-100" style="display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; padding: 12px; border-radius: 12px; font-weight: 700;">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="20" height="20">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
+                    Panel de Control (Admin)
+                </a>
+            </div>
+        }
+
         <div style="width: 100%; margin-top: 10px;">
             <a href="@Url.Action("EditarPerfil", "Account")" class="btn-primary-black w-100" style="display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="20" height="20">

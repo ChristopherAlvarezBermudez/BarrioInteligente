@@ -40,10 +40,14 @@ namespace BarrioInteligenteWeb.Models
         public string? CodigoRecuperacion { get; set; }
         public DateTime? ExpiracionCodigo { get; set; }
 
-        public int PuntosReputacion { get; set; } = 0;
+        public int PuntosReputacion { get; set; } = 100;
 
-        public NivelReputacion Reputacion { get; set; } = NivelReputacion.Excelente;
+        public NivelReputacion Reputacion { get; set; } = NivelReputacion.Buena;
 
         public string? MotivoReputacion { get; set; }
+
+        public bool EsAdmin { get; set; } = false;
+
+        public virtual ICollection<Insignia> Insignias { get; set; } = new List<Insignia>();
     }
 }

@@ -20,25 +20,32 @@ namespace BarrioInteligenteWeb.Services
         {
             try
             {
-                var emailFrom = _configuration["EmailSettings:From"];
-                var password = _configuration["EmailSettings:Password"];
+                var server = _configuration["SmtpSettings:Server"] ?? "smtp.gmail.com";
+                var portStr = _configuration["SmtpSettings:Port"] ?? "587";
+                int port = int.TryParse(portStr, out int p) ? p : 587;
+                
+                var email = _configuration["SmtpSettings:SenderEmail"];
+                var password = _configuration["SmtpSettings:Password"];
+                var senderName = _configuration["SmtpSettings:SenderName"] ?? "Barrio Inteligente";
 
-                if (string.IsNullOrEmpty(emailFrom) || string.IsNullOrEmpty(password))
+                if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
                 {
-                    _logger.LogWarning("EmailSettings not configured correctly in appsettings.json.");
-                    return;
+                    throw new InvalidOperationException(
+                        "Credenciales SMTP no encontradas en la configuración o User Secrets. " +
+                        "Verifique que SmtpSettings:SenderEmail y SmtpSettings:Password estén configurados.");
                 }
 
-                using var smtpClient = new SmtpClient("smtp.gmail.com")
+                using var smtpClient = new SmtpClient(server)
                 {
-                    Port = 587,
-                    Credentials = new NetworkCredential(emailFrom, password),
+                    Port = port,
+                    UseDefaultCredentials = false,
+                    Credentials = new NetworkCredential(email, password),
                     EnableSsl = true,
                 };
 
                 var mailMessage = new MailMessage
                 {
-                    From = new MailAddress(emailFrom, "Barrio Inteligente"),
+                    From = new MailAddress(email, senderName),
                     Subject = asunto,
                     Body = cuerpoHtml,
                     IsBodyHtml = true,

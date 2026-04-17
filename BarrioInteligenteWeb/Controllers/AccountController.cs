@@ -9,6 +9,7 @@ using System.Net.Mail;
 using BarrioInteligenteWeb.Data;
 using BarrioInteligenteWeb.Models;
 using BarrioInteligenteWeb.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace BarrioInteligenteWeb.Controllers
 {
@@ -47,7 +48,7 @@ namespace BarrioInteligenteWeb.Controllers
         public IActionResult Perfil()
         {
             var id = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var usuario = _context.Usuarios.FirstOrDefault(u => u.Id == id);
+            var usuario = _context.Usuarios.Include(u => u.Insignias).FirstOrDefault(u => u.Id == id);
             if (usuario == null) return RedirectToAction("Login");
             return View(usuario);
         }
@@ -153,26 +154,43 @@ namespace BarrioInteligenteWeb.Controllers
                 return View();
             }
 
-            var codigo = new Random().Next(100000, 999999).ToString();
-            var usuario = new Usuario
+            // ── Transacción atómica: usuario + correo (todo o nada) ──
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                NombreCompleto = nombreCompleto,
-                Correo = correo,
-                Password = HashPassword(password),
-                FechaRegistro = DateTime.Now,
-                EmailConfirmado = false,
-                CodigoVerificacion = codigo
-            };
+                var codigo = new Random().Next(100000, 999999).ToString();
+                var usuario = new Usuario
+                {
+                    NombreCompleto = nombreCompleto,
+                    Correo = correo,
+                    Password = HashPassword(password),
+                    FechaRegistro = DateTime.Now,
+                    EmailConfirmado = false,
+                    CodigoVerificacion = codigo
+                };
 
-            _context.Usuarios.Add(usuario);
-            await _context.SaveChangesAsync();
+                _context.Usuarios.Add(usuario);
+                await _context.SaveChangesAsync();
 
-            var asunto = "Verifica tu cuenta - Barrio Inteligente";
-            var cuerpo = $"<h3>¡Hola {nombreCompleto}!</h3><p>Tu código de verificación es: <b>{codigo}</b></p>";
-            await _emailService.EnviarAsync(correo, asunto, cuerpo);
+                // Intentar enviar el correo de verificación
+                var asunto = "Verifica tu cuenta - Barrio Inteligente";
+                var cuerpo = $"<h3>¡Hola {nombreCompleto}!</h3><p>Tu código de verificación es: <b>{codigo}</b></p>";
+                await _emailService.EnviarAsync(correo, asunto, cuerpo);
 
-            TempData["CorreoAConfirmar"] = correo;
-            return RedirectToAction("VerificarEmail");
+                // Si llegamos aquí, todo salió bien
+                await transaction.CommitAsync();
+
+                TempData["CorreoAConfirmar"] = correo;
+                return RedirectToAction("VerificarEmail");
+            }
+            catch (Exception ex)
+            {
+                // Rollback: el usuario NO se guarda en la DB
+                await transaction.RollbackAsync();
+                Console.WriteLine($"[ERROR] Registro fallido para {correo}: {ex.Message}");
+                ViewBag.Error = "No se pudo enviar el correo de verificación. Intente de nuevo.";
+                return View();
+            }
         }
 
         // GET: /Account/VerificarEmail
@@ -380,7 +398,15 @@ namespace BarrioInteligenteWeb.Controllers
 
             var asunto = "Confirma los cambios en tu perfil - Barrio Inteligente";
             var cuerpo = $"<h3>¡Hola {usuario.NombreCompleto}!</h3><p>Alguien intentó modificar tu perfil. Tu código de autorización es: <b>{codigo}</b></p>";
-            await _emailService.EnviarAsync(usuario.Correo, asunto, cuerpo);
+            
+            try
+            {
+                await _emailService.EnviarAsync(usuario.Correo, asunto, cuerpo);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[WARNING] Error enviando correo de edición de perfil: {ex.Message}");
+            }
 
             TempData["EditNombre"] = nuevoNombre;
             TempData["EditCorreo"] = nuevoCorreo;
@@ -577,20 +603,34 @@ namespace BarrioInteligenteWeb.Controllers
 
         private void EnviarCorreoRecuperacion(string destino, string codigo)
         {
-            var from = _config["EmailSettings:From"];
-            var password = _config["EmailSettings:Password"];
+            try
+            {
+                var server = _config["SmtpSettings:Server"] ?? "smtp.gmail.com";
+                var portStr = _config["SmtpSettings:Port"] ?? "587";
+                int port = int.TryParse(portStr, out int p) ? p : 587;
+                var from = _config["SmtpSettings:SenderEmail"];
+                var password = _config["SmtpSettings:Password"];
+                var senderName = _config["SmtpSettings:SenderName"] ?? "Barrio Inteligente";
 
-            var mensaje = new MailMessage();
-            mensaje.From = new MailAddress(from!);
-            mensaje.To.Add(destino);
-            mensaje.Subject = "Recuperación de contraseña - Barrio Inteligente";
-            mensaje.IsBodyHtml = true;
-            mensaje.Body = $"<h3>Recupera tu contraseña</h3><p>Tu código de verificación es: <b>{codigo}</b></p><p>Este código expira en 15 minutos.</p>";
+                if (string.IsNullOrEmpty(from) || string.IsNullOrEmpty(password)) return;
 
-            using var smtp = new SmtpClient("smtp.gmail.com", 587);
-            smtp.Credentials = new NetworkCredential(from, password);
-            smtp.EnableSsl = true;
-            smtp.Send(mensaje);
+                var mensaje = new MailMessage();
+                mensaje.From = new MailAddress(from, senderName);
+                mensaje.To.Add(destino);
+                mensaje.Subject = "Recuperación de contraseña - Barrio Inteligente";
+                mensaje.IsBodyHtml = true;
+                mensaje.Body = $"<h3>Recupera tu contraseña</h3><p>Tu código de verificación es: <b>{codigo}</b></p><p>Este código expira en 15 minutos.</p>";
+
+                using var smtp = new SmtpClient(server, port);
+                smtp.UseDefaultCredentials = false;
+                smtp.Credentials = new NetworkCredential(from, password);
+                smtp.EnableSsl = true;
+                smtp.Send(mensaje);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[WARNING] Error enviando correo de recuperación: {ex.Message}");
+            }
         }
 
         // ──────────────────────────────────────────────────────────────────────

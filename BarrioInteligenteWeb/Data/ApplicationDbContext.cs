@@ -15,6 +15,8 @@ namespace BarrioInteligenteWeb.Data
         public DbSet<ComentarioLike> ComentariosLikes { get; set; }
         public DbSet<HistorialEstado> HistorialEstados { get; set; }
         public DbSet<Validacion> Validaciones { get; set; }
+        public DbSet<DenunciaUsuario> DenunciasUsuarios { get; set; }
+        public DbSet<Insignia> Insignias { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -58,6 +60,28 @@ namespace BarrioInteligenteWeb.Data
             modelBuilder.Entity<Usuario>()
                 .Property(u => u.EmailConfirmado)
                 .HasDefaultValue(true);
+
+            // ── Denuncias de usuarios ──
+            modelBuilder.Entity<DenunciaUsuario>()
+                .HasOne(d => d.Denunciante)
+                .WithMany()
+                .HasForeignKey(d => d.DenuncianteId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<DenunciaUsuario>()
+                .HasOne(d => d.Reportado)
+                .WithMany()
+                .HasForeignKey(d => d.ReportadoId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // ── Soft Delete (Filtros Globales) ──
+            modelBuilder.Entity<Reporte>().HasQueryFilter(r => !r.EsEliminado);
+            modelBuilder.Entity<Comentario>().HasQueryFilter(c => !c.EsEliminado);
+
+            // Filtros globales para entidades hijas
+            modelBuilder.Entity<Validacion>().HasQueryFilter(v => !v.Reporte.EsEliminado);
+            modelBuilder.Entity<HistorialEstado>().HasQueryFilter(h => !h.Reporte.EsEliminado);
+            modelBuilder.Entity<ComentarioLike>().HasQueryFilter(cl => !cl.Comentario.EsEliminado);
         }
     }
 }

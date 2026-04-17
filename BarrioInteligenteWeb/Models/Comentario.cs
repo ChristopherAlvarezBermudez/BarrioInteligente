@@ -20,5 +20,7 @@ namespace BarrioInteligenteWeb.Models
         public Usuario Usuario { get; set; } // Propiedad de navegación
 
         public ICollection<ComentarioLike> Likes { get; set; }
+
+        public bool EsEliminado { get; set; } = false;
     }
 }

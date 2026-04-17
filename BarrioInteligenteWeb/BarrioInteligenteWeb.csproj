@@ -18,4 +18,9 @@
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
   </ItemGroup>
 
+  <!-- Excluir migraciones antiguas de la compilación -->
+  <ItemGroup>
+    <Compile Remove="Migrations_Antiguas\**" />
+  </ItemGroup>
+
 </Project>

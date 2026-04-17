@@ -197,7 +197,11 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     // Mapa Picker
-    let pickerMap = L.map('map-picker').setView([18.4861, -69.9312], 14);
+    let pickerMap = L.map('map-picker', {
+        maxBounds: [[17.5, -72.0], [20.0, -68.3]],
+        maxBoundsViscosity: 1.0,
+        minZoom: 7
+    }).setView([18.4861, -69.9312], 14);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap',

@@ -301,7 +301,11 @@
         defaultLon = reportesConCoordenadas[0].longitud;
     }
 
-    const map = L.map('mapa').setView([defaultLat, defaultLon], 15);
+    const map = L.map('mapa', {
+        maxBounds: [[17.5, -72.0], [20.0, -68.3]],
+        maxBoundsViscosity: 1.0,
+        minZoom: 7
+    }).setView([defaultLat, defaultLon], 15);
     setTimeout(() => { map.invalidateSize(); }, 100);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -371,15 +375,54 @@
         { nombre: 'Otro',    emoji: '📍', color: '#9b59b6' }
     ];
 
-    // Configuración visual del heatmap (reutilizada en cada recreación)
+    // ── Configuración Snap Map: gradiente frío→caliente, peso uniforme ──
     const heatmapOpts = {
-        radius: 40,
-        blur: 35,
-        maxZoom: 17,
-        gradient: { 0.4: 'blue', 0.6: 'lime', 0.8: 'yellow', 1.0: 'red' }
+        radius: 25,
+        blur: 15,
+        max: 8,           // Se necesitan ~8 reportes apilados para volverse rojo
+        maxZoom: 18,
+        minOpacity: 0.35,
+        gradient: {
+            0.2: 'blue',
+            0.4: 'cyan',
+            0.6: 'lime',
+            0.8: 'yellow',
+            1.0: 'red'
+        }
     };
 
     let capaCalor = null;
+
+    /** Calcula el radio óptimo según el nivel de zoom actual (Pro Feature). */
+    function calcularRadioPorZoom(zoom) {
+        // Zoom 10 (ciudad) → radio 40 | Zoom 15 (barrio) → 25 | Zoom 18 (calle) → 12
+        if (zoom >= 18) return 12;
+        if (zoom >= 16) return 18;
+        if (zoom >= 14) return 25;
+        if (zoom >= 12) return 32;
+        return 40;
+    }
+
+    /** Calcula el blur óptimo según el nivel de zoom actual. */
+    function calcularBlurPorZoom(zoom) {
+        if (zoom >= 18) return 8;
+        if (zoom >= 16) return 12;
+        if (zoom >= 14) return 15;
+        if (zoom >= 12) return 20;
+        return 25;
+    }
+
+    // ── Zoom dinámico: recrea la capa de calor al cambiar zoom ──
+    map.on('zoomend', function () {
+        if (!calorActivo || !capaCalor) return;
+
+        const zoom = map.getZoom();
+        const nuevoRadio = calcularRadioPorZoom(zoom);
+        const nuevoBlur = calcularBlurPorZoom(zoom);
+
+        // L.heatLayer expone setOptions para radius/blur
+        capaCalor.setOptions({ radius: nuevoRadio, blur: nuevoBlur });
+    });
 
     /**
      * Carga el mapa de calor para la categoría seleccionada.
@@ -401,8 +444,8 @@
                 // Guardar datos enriquecidos para clics interactivos
                 reportesCalorActuales = data;
 
-                // Mapear al formato que necesita L.heatLayer: [lat, lng, intensidad]
-                const heatData = data.map(d => [d.lat, d.lng, d.intensidad]);
+                // Peso uniforme: todos los reportes pesan exactamente 1.0
+                const heatData = data.map(d => [d.lat, d.lng, 1.0]);
 
                 // Destruir capa anterior si existe
                 if (capaCalor) {
@@ -410,8 +453,15 @@
                     capaCalor = null;
                 }
 
+                // Construir opciones con radio y blur adaptados al zoom actual
+                const zoom = map.getZoom();
+                const optsActuales = Object.assign({}, heatmapOpts, {
+                    radius: calcularRadioPorZoom(zoom),
+                    blur: calcularBlurPorZoom(zoom)
+                });
+
                 // Crear capa nueva desde cero con los datos frescos
-                capaCalor = L.heatLayer(heatData, heatmapOpts).addTo(map);
+                capaCalor = L.heatLayer(heatData, optsActuales).addTo(map);
 
                 // Ocultar marcadores normales si es la primera activación
                 if (!calorActivo) {

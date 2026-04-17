@@ -9,39 +9,333 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Verificar Email — Barrio Inteligente</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="~/css/barrio.css" asp-append-version="true" />
+    
+    <style>
+        /* ── Fondo Elegante ── */
+        body.premium-bg {
+            background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* ── Tarjeta Animada ── */
+        .verification-card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 3rem 2.5rem;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+            text-align: center;
+            animation: slideUpFade 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        @@keyframes slideUpFade {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Icono ── */
+        .icon-container {
+            width: 88px;
+            height: 88px;
+            background: #fef2f2;
+            color: #dc2626; /* Rojo institucional */
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 42px;
+            margin: 0 auto 24px;
+            box-shadow: 0 8px 24px rgba(220, 38, 38, 0.15);
+            animation: popIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.2s;
+            opacity: 0;
+            transform: scale(0.8);
+        }
+
+        @@keyframes popIn {
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* ── Textos ── */
+        .verify-title {
+            font-size: 26px;
+            font-weight: 800;
+            color: #1f2937;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
+        }
+        
+        .verify-subtitle {
+            font-size: 15px;
+            color: #6b7280;
+            margin-bottom: 32px;
+            line-height: 1.6;
+        }
+
+        .highlight-email {
+            color: #2563eb;
+            font-weight: 700;
+        }
+
+        /* ── Input 6 Cajas ── */
+        .code-inputs {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 32px;
+            direction: ltr;
+        }
+
+        .code-box {
+            width: 52px;
+            height: 64px;
+            border: 2.5px solid #e5e7eb;
+            border-radius: 14px;
+            font-size: 28px;
+            font-weight: 800;
+            text-align: center;
+            color: #111;
+            background: #f9fafb;
+            transition: all 0.25s ease;
+            padding: 0;
+        }
+
+        .code-box:focus {
+            border-color: #dc2626;
+            background: #ffffff;
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.12);
+            transform: translateY(-2px);
+        }
+
+        .code-box.filled {
+            border-color: #111111;
+            background: #ffffff;
+        }
+
+        /* ── Botón Principal ── */
+        .btn-verify {
+            background: #111111;
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 16px;
+            border: none;
+            border-radius: 16px;
+            padding: 16px;
+            width: 100%;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            cursor: pointer;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-verify:hover {
+            background: #dc2626;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(220, 38, 38, 0.3);
+        }
+
+        .btn-verify:active {
+            transform: translateY(0);
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+        }
+
+        /* ── Enlace volver ── */
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 28px;
+            color: #6b7280;
+            font-size: 14.5px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover {
+            color: #111;
+        }
+
+        /* ── Responsivo ── */
+        @@media (max-width: 400px) {
+            .code-box {
+                width: 44px;
+                height: 56px;
+                font-size: 24px;
+            }
+            .icon-container { width: 72px; height: 72px; font-size: 32px; }
+            .verification-card { padding: 2rem 1.5rem; }
+        }
+    </style>
 </head>
-<body class="auth-bg">
-    <div class="auth-container">
-        <div class="auth-card">
-            <h2 class="auth-title">Verifica tu correo ✉️</h2>
-            <p class="auth-subtitle">Ingresa el código de 6 dígitos que enviamos a <b>@ViewBag.Correo</b></p>
-            
-            @if (ViewBag.Error != null)
-            {
-                <div class="alert alert-danger" style="border-radius:12px; font-size:14px; padding:10px;">
-                    @ViewBag.Error
-                </div>
+<body class="premium-bg">
+
+    <div class="verification-card">
+        
+        <div class="icon-container">
+            <i class="bi bi-envelope-open-fill"></i>
+        </div>
+
+        <h2 class="verify-title">Verifica tu correo</h2>
+        <p class="verify-subtitle">Ingresa el código de 6 dígitos que enviamos a la dirección <br/> <span class="highlight-email">@ViewBag.Correo</span></p>
+
+        @if (ViewBag.Error != null)
+        {
+            <div class="alert alert-danger" style="border-radius:14px; font-size:14px; font-weight:600; padding:12px; margin-bottom:24px; text-align:left; display:flex; align-items:center; gap:8px;">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                @ViewBag.Error
+            </div>
+        }
+
+        <form asp-action="VerificarEmail" method="post" id="verificationForm">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="correo" value="@ViewBag.Correo" />
+            <!-- Input oculto donde enviaremos el código concatenado -->
+            <input type="hidden" name="codigo" id="codigoSecreto" required />
+
+            <div class="code-inputs" id="codeContainer">
+                <input type="text" maxlength="1" class="code-box" autocomplete="off" autofocus />
+                <input type="text" maxlength="1" class="code-box" autocomplete="off" />
+                <input type="text" maxlength="1" class="code-box" autocomplete="off" />
+                <input type="text" maxlength="1" class="code-box" autocomplete="off" />
+                <input type="text" maxlength="1" class="code-box" autocomplete="off" />
+                <input type="text" maxlength="1" class="code-box" autocomplete="off" />
+            </div>
+
+            <button type="submit" class="btn-verify">
+                Confirmar Código
+            </button>
+        </form>
+
+        <a href="@Url.Action("Login", "Account")" class="back-link">
+            <i class="bi bi-arrow-left mt-1"></i> Volver al inicio
+        </a>
+
+    </div>
+
+    <!-- Script para manejar la lógica de los 6 inputs -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const inputs = document.querySelectorAll(".code-box");
+            const hiddenInput = document.getElementById("codigoSecreto");
+            const form = document.getElementById("verificationForm");
+
+            // Función para actualizar el input oculto
+            function updateHiddenInput() {
+                let code = "";
+                inputs.forEach(input => code += input.value);
+                hiddenInput.value = code;
             }
 
-            <form asp-action="VerificarEmail" method="post">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="correo" value="@ViewBag.Correo" />
-                
-                <div class="form-group mb-3">
-                    <label class="form-label">Código numérico</label>
-                    <input type="text" name="codigo" class="form-control barrio-input-text" maxlength="6" pattern="\d{6}" placeholder="Ej: 123456" required style="font-size:24px; text-align:center; letter-spacing:4px; font-weight:700;" autocomplete="off" />
-                </div>
-                
-                <button type="submit" class="btn-primary-black w-100 mt-2">
-                    Confirmar Código
-                </button>
-            </form>
+            inputs.forEach((input, index) => {
+                // Al tipear un carácter
+                input.addEventListener("input", function (e) {
+                    const val = this.value;
+
+                    // Si se pegó algo más largo (handled by paste event, but just in case)
+                    if (val.length > 1) {
+                        this.value = val.slice(0, 1);
+                    }
+
+                    // Remover estilos previos o agregar clase "filled"
+                    if (this.value) {
+                        this.classList.add("filled");
+                        // Saltar al siguiente input si existe
+                        if (index < inputs.length - 1) {
+                            inputs[index + 1].focus();
+                        }
+                    } else {
+                        this.classList.remove("filled");
+                    }
+                    
+                    updateHiddenInput();
+                });
+
+                // Al borrar con retroceso
+                input.addEventListener("keydown", function(e) {
+                    if (e.key === "Backspace" && !this.value) {
+                        // Si está vacío y presionan borrar, ir al cuadro anterior
+                        if (index > 0) {
+                            inputs[index - 1].focus();
+                            inputs[index - 1].value = "";
+                            inputs[index - 1].classList.remove("filled");
+                            updateHiddenInput();
+                        }
+                    } else if (e.key === "Enter") {
+                        // Prevenir enter si no está completo
+                        e.preventDefault();
+                        if (hiddenInput.value.length === 6) {
+                            form.submit();
+                        }
+                    }
+                });
+
+                // Al pegar texto
+                input.addEventListener("paste", function(e) {
+                    e.preventDefault();
+                    let pastedData = (e.clipboardData || window.clipboardData).getData("text").trim();
+                    
+                    // Extraer solo números
+                    pastedData = pastedData.replace(/\D/g, '').substring(0, 6);
+                    
+                    if (pastedData) {
+                        // Distribuir en las cajas
+                        for (let i = 0; i < pastedData.length; i++) {
+                            if (i < inputs.length) {
+                                inputs[i].value = pastedData[i];
+                                inputs[i].classList.add("filled");
+                            }
+                        }
+                        updateHiddenInput();
+                        
+                        // Foco en el último modificado
+                        let focusIndex = Math.min(pastedData.length, inputs.length - 1);
+                        if (pastedData.length === 6) {
+                            inputs[5].focus();
+                            inputs[5].blur(); // Termina la acción si son los 6 completos
+                            
+                            // Animación de 'listo'
+                            document.querySelector('.btn-verify').classList.add('ready');
+                        } else {
+                            inputs[focusIndex].focus();
+                        }
+                    }
+                });
+            });
             
-            <a href="@Url.Action("Login", "Account")" class="auth-link d-block text-center mt-4">
-                Volver al Login
-            </a>
-        </div>
-    </div>
+            // Validar antes de enviar
+            form.addEventListener("submit", function(e) {
+                updateHiddenInput();
+                if (hiddenInput.value.length < 6) {
+                    e.preventDefault();
+                    
+                    // Shake animation si faltan números
+                    const container = document.getElementById("codeContainer");
+                    container.style.transform = "translateX(-10px)";
+                    setTimeout(() => container.style.transform = "translateX(10px)", 50);
+                    setTimeout(() => container.style.transform = "translateX(-10px)", 100);
+                    setTimeout(() => container.style.transform = "translateX(5px)", 150);
+                    setTimeout(() => container.style.transform = "translateX(0)", 200);
+                    
+                    // Enfocar el primer input vacío
+                    for(let i=0; i<inputs.length; i++) {
+                        if(!inputs[i].value) {
+                            inputs[i].focus();
+                            break;
+                        }
+                    }
+                }
+            });
+        });
+    </script>
 </body>
 </html>

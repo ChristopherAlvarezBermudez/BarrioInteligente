@@ -4,6 +4,7 @@ using BarrioInteligenteWeb.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BarrioInteligenteWeb.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260415202607_AddDenunciasUsuarios_Y_ReputacionDefaults")]
+    partial class AddDenunciasUsuarios_Y_ReputacionDefaults
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -29,9 +32,6 @@ namespace BarrioInteligenteWeb.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("EsEliminado")
-                        .HasColumnType("bit");
 
                     b.Property<DateTime>("Fecha")
                         .HasColumnType("datetime2");
@@ -154,33 +154,6 @@ namespace BarrioInteligenteWeb.Migrations
                     b.ToTable("HistorialEstados");
                 });
 
-            modelBuilder.Entity("BarrioInteligenteWeb.Models.Insignia", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ColorCss")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("IconoEmoji")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Nombre")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Insignias");
-                });
-
             modelBuilder.Entity("BarrioInteligenteWeb.Models.Reporte", b =>
                 {
                     b.Property<int>("Id")
@@ -199,9 +172,6 @@ namespace BarrioInteligenteWeb.Migrations
 
                     b.Property<string>("DireccionFisica")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("EsEliminado")
-                        .HasColumnType("bit");
 
                     b.Property<string>("Estado")
                         .IsRequired()
@@ -267,9 +237,6 @@ namespace BarrioInteligenteWeb.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
 
-                    b.Property<bool>("EsAdmin")
-                        .HasColumnType("bit");
-
                     b.Property<DateTime?>("ExpiracionCodigo")
                         .HasColumnType("datetime2");
 
@@ -328,21 +295,6 @@ namespace BarrioInteligenteWeb.Migrations
                     b.HasIndex("UsuarioId");
 
                     b.ToTable("Validaciones");
-                });
-
-            modelBuilder.Entity("InsigniaUsuario", b =>
-                {
-                    b.Property<int>("InsigniasId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UsuariosId")
-                        .HasColumnType("int");
-
-                    b.HasKey("InsigniasId", "UsuariosId");
-
-                    b.HasIndex("UsuariosId");
-
-                    b.ToTable("InsigniaUsuario");
                 });
 
             modelBuilder.Entity("BarrioInteligenteWeb.Models.Comentario", b =>
@@ -449,21 +401,6 @@ namespace BarrioInteligenteWeb.Migrations
                     b.Navigation("Reporte");
 
                     b.Navigation("Usuario");
-                });
-
-            modelBuilder.Entity("InsigniaUsuario", b =>
-                {
-                    b.HasOne("BarrioInteligenteWeb.Models.Insignia", null)
-                        .WithMany()
-                        .HasForeignKey("InsigniasId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BarrioInteligenteWeb.Models.Usuario", null)
-                        .WithMany()
-                        .HasForeignKey("UsuariosId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("BarrioInteligenteWeb.Models.Comentario", b =>
