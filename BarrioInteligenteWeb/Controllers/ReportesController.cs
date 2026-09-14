@@ -184,12 +184,20 @@ namespace BarrioInteligenteWeb.Controllers
             }
         }
 
-        public IActionResult Crear()
+        public async Task<IActionResult> Crear()
         {
-            ViewBag.FotoPerfil = _context.Usuarios
-                .Where(u => u.Id == UsuarioActualId)
-                .Select(u => u.FotoPerfil)
-                .FirstOrDefault();
+            var usuario = await _context.Usuarios.FindAsync(UsuarioActualId);
+            if (usuario != null && usuario.EstaSuspendido)
+            {
+                var restante = usuario.FechaSuspensionHasta!.Value - DateTime.UtcNow;
+                var tiempoTxt = restante.TotalDays >= 1 
+                    ? $"{(int)restante.TotalDays} día(s)" 
+                    : $"{restante.Hours} hora(s) y {restante.Minutes} min";
+                TempData["ErrorMessage"] = $"⛔ Tu cuenta está suspendida temporalmente (restan {tiempoTxt}) por sanciones comunitarias. No puedes publicar reportes.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            ViewBag.FotoPerfil = usuario?.FotoPerfil;
             return View();
         }
 
@@ -230,14 +238,19 @@ namespace BarrioInteligenteWeb.Controllers
         {
             try
             {
+                var usuario = await _context.Usuarios.FindAsync(UsuarioActualId);
+                if (usuario != null && usuario.EstaSuspendido)
+                {
+                    ModelState.AddModelError(string.Empty, "Tu cuenta está suspendida por sanciones de conducta y lenguaje.");
+                    ViewBag.ErrorGuardado = $"Tu cuenta se encuentra suspendida temporalmente hasta el {usuario.FechaSuspensionHasta:dd/MM/yyyy HH:mm}.";
+                    return View(reporte);
+                }
+
                 if (!EsUbicacionValida(reporte.Latitud, reporte.Longitud))
                 {
                     ModelState.AddModelError(string.Empty, "La ubicación debe estar dentro del territorio terrestre de la República Dominicana (no en el mar ni en territorio extranjero).");
                     ViewBag.ErrorGuardado = "La ubicación seleccionada está en el mar o fuera de la República Dominicana.";
-                    ViewBag.FotoPerfil = _context.Usuarios
-                        .Where(u => u.Id == UsuarioActualId)
-                        .Select(u => u.FotoPerfil)
-                        .FirstOrDefault();
+                    ViewBag.FotoPerfil = usuario?.FotoPerfil;
                     return View(reporte);
                 }
 
@@ -434,6 +447,13 @@ namespace BarrioInteligenteWeb.Controllers
         {
             try
             {
+                var usuario = await _context.Usuarios.FindAsync(UsuarioActualId);
+                if (usuario != null && usuario.EstaSuspendido)
+                {
+                    TempData["ErrorMessage"] = "⛔ Tu cuenta se encuentra temporalmente suspendida por sanciones comunitarias. No puedes publicar comentarios.";
+                    return RedirectToAction(nameof(Detalles), new { id = reporteId });
+                }
+
                 if (!string.IsNullOrWhiteSpace(texto))
                 {
                     // ── Filtro de profanidades ANTES de persistir ──

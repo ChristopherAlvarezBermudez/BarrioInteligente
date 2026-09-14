@@ -50,6 +50,11 @@ namespace BarrioInteligenteWeb.Models
 
         public string Rol { get; set; } = RolesUsuario.Ciudadano;
 
+        public DateTime? FechaSuspensionHasta { get; set; }
+        public string? MotivoSuspension { get; set; }
+
+        public bool EstaSuspendido => FechaSuspensionHasta.HasValue && FechaSuspensionHasta.Value > DateTime.UtcNow;
+
         public virtual ICollection<Insignia> Insignias { get; set; } = new List<Insignia>();
     }
 

@@ -108,6 +108,17 @@ namespace BarrioInteligenteWeb.Controllers
                 }
             }
 
+            if (usuario.EstaSuspendido)
+            {
+                var restante = usuario.FechaSuspensionHasta!.Value - DateTime.UtcNow;
+                var tiempoTxt = restante.TotalDays >= 1 
+                    ? $"{(int)restante.TotalDays} día(s) y {restante.Hours} hora(s)" 
+                    : $"{restante.Hours} hora(s) y {restante.Minutes} minuto(s)";
+                ViewBag.Error = $"⛔ Tu cuenta ha sido suspendida temporalmente por sanciones de convivencia (restan {tiempoTxt}). Motivo: {usuario.MotivoSuspension ?? "Infracción de normas de lenguaje y conducta"}.";
+                ViewBag.ReturnUrl = returnUrl;
+                return View();
+            }
+
             if (!usuario.EmailConfirmado)
             {
                 TempData["CorreoAConfirmar"] = usuario.Correo;

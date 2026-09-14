@@ -383,11 +383,11 @@ namespace BarrioInteligenteWeb.Services
             }
 
             // ┌──────────────────────────────────────────────┐
-            // │ PENALIZACIÓN: -5 pts si se censuró algo      │
+            // │ PENALIZACIÓN: -10 pts si se censuró algo     │
             // └──────────────────────────────────────────────┘
             if (resultado.FueCensurado)
             {
-                await PenalizarUsuarioAsync(usuarioId, 5,
+                await PenalizarUsuarioAsync(usuarioId, 10,
                     $"Lenguaje ofensivo detectado: {string.Join(", ", resultado.PalabrasDetectadas)}");
             }
 
@@ -494,26 +494,49 @@ namespace BarrioInteligenteWeb.Services
         }
 
         // ══════════════════════════════════════════════════════════════
-        // PENALIZACIÓN
+        // PENALIZACIÓN Y SUSPENSIÓN AUTOMÁTICA POR REPUTACIÓN NEGATIVA
         // ══════════════════════════════════════════════════════════════
         private async Task PenalizarUsuarioAsync(int usuarioId, int puntosARestar, string motivo)
         {
             var usuario = await _context.Usuarios.FindAsync(usuarioId);
             if (usuario == null) return;
 
-            usuario.PuntosReputacion = Math.Max(0, usuario.PuntosReputacion - puntosARestar);
+            // Puntos negativos permitidos sin tope inferior en 0
+            usuario.PuntosReputacion -= puntosARestar;
             usuario.Reputacion = CalcularNivel(usuario.PuntosReputacion);
             usuario.MotivoReputacion = motivo;
+
+            // Verificación de suspensión temporal por puntos negativos acumulados
+            if (usuario.PuntosReputacion <= -100)
+            {
+                // Suspensión de 1 semana (7 días)
+                var nuevaSuspension = DateTime.UtcNow.AddDays(7);
+                if (!usuario.FechaSuspensionHasta.HasValue || usuario.FechaSuspensionHasta.Value < nuevaSuspension)
+                {
+                    usuario.FechaSuspensionHasta = nuevaSuspension;
+                }
+                usuario.MotivoSuspension = "Cuenta suspendida temporalmente por 1 semana al acumular -100 pts por reincidencia en faltas graves de lenguaje ofensivo.";
+            }
+            else if (usuario.PuntosReputacion <= -50)
+            {
+                // Suspensión de 2 días
+                var nuevaSuspension = DateTime.UtcNow.AddDays(2);
+                if (!usuario.FechaSuspensionHasta.HasValue || usuario.FechaSuspensionHasta.Value < nuevaSuspension)
+                {
+                    usuario.FechaSuspensionHasta = nuevaSuspension;
+                }
+                usuario.MotivoSuspension = "Cuenta suspendida temporalmente por 2 días al acumular -50 pts en sanciones por lenguaje ofensivo.";
+            }
 
             await _context.SaveChangesAsync();
 
             _logger.LogInformation(
-                "[Reputación] Usuario {Id} penalizado -{Puntos}pts → {NuevoPuntaje} ({Nivel}). Motivo: {Motivo}",
-                usuarioId, puntosARestar, usuario.PuntosReputacion, usuario.Reputacion, motivo);
+                "[Reputación] Usuario {Id} penalizado -{Puntos}pts → {NuevoPuntaje} ({Nivel}). Motivo: {Motivo}. Suspensión: {Hasta}",
+                usuarioId, puntosARestar, usuario.PuntosReputacion, usuario.Reputacion, motivo, usuario.FechaSuspensionHasta);
         }
 
         /// <summary>
-        /// Calcula el NivelReputacion basado en los puntos actuales.
+        /// Calcula el NivelReputacion basado en los puntos actuales (puntos <= 0 pasan a Crítica).
         /// </summary>
         public static NivelReputacion CalcularNivel(int puntos)
         {
@@ -522,7 +545,7 @@ namespace BarrioInteligenteWeb.Services
                 > 80 => NivelReputacion.Excelente,
                 > 60 => NivelReputacion.Buena,
                 > 40 => NivelReputacion.Regular,
-                > 20 => NivelReputacion.Mala,
+                > 0  => NivelReputacion.Mala,
                 _    => NivelReputacion.Critica
             };
         }

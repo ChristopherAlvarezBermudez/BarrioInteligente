@@ -284,9 +284,19 @@
                                         <div>
                                             <div class="d-flex align-items-center gap-2">
                                                 <h6 class="mb-0 fw-bold" style="color: #111;">@u.NombreCompleto</h6>
-                                                @if (u.Correo == "stevenrodriguez77777@gmail.com")
+                                                @if (u.Correo == "stevenrodriguez77777@gmail.com" || u.Correo == "christopherxd2005@gmail.com")
                                                 {
                                                     <span class="badge bg-dark" style="font-size: 10px;">PROPIETARIO</span>
+                                                }
+                                                @if (u.EstaSuspendido)
+                                                {
+                                                    var restante = u.FechaSuspensionHasta!.Value - DateTime.UtcNow;
+                                                    var tiempoTxt = restante.TotalDays >= 1 
+                                                        ? $"{(int)restante.TotalDays}d" 
+                                                        : $"{Math.Max(1, restante.Hours)}h";
+                                                    <span class="badge bg-danger text-white ms-1" style="font-size: 10px;" id="badge-susp-@u.Id" title="@u.MotivoSuspension">
+                                                        ⛔ SUSPENDIDO (@tiempoTxt)
+                                                    </span>
                                                 }
                                             </div>
                                             <small class="text-muted">@u.Correo</small>
@@ -302,7 +312,7 @@
                                 </td>
                                 <td>
                                     <div><strong id="rep-puntos-@u.Id">@u.PuntosReputacion pts</strong></div>
-                                    <span class="badge" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-size:11px;">@u.Reputacion.ToString()</span>
+                                    <span class="badge" id="rep-badge-@u.Id" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-size:11px;">@u.Reputacion.ToString()</span>
                                 </td>
                                 <td id="insignias-@u.Id">
                                     @if (u.Insignias.Any())
@@ -320,7 +330,7 @@
                                     }
                                 </td>
                                 <td class="text-end pe-4">
-                                    <button class="btn btn-sm btn-outline-dark rounded-3 px-3 fw-semibold" onclick="openAdminModal(@u.Id, '@u.NombreCompleto', '@rolActual', @u.PuntosReputacion)">
+                                    <button class="btn btn-sm btn-outline-dark rounded-3 px-3 fw-semibold" onclick="openAdminModal(@u.Id, '@u.NombreCompleto', '@rolActual', @u.PuntosReputacion, @(u.EstaSuspendido ? "true" : "false"), '@(u.MotivoSuspension ?? "")', '@(u.FechaSuspensionHasta?.ToString("dd/MM/yyyy HH:mm") ?? "")')">
                                         ⚙️ Gestionar Rol & Perfil
                                     </button>
                                 </td>
@@ -348,6 +358,17 @@
       </div>
       <div class="modal-body p-4">
         
+        <!-- ALERTA DE SUSPENSIÓN -->
+        <div id="mSuspensionAlert" class="alert alert-danger py-2 px-3 mb-4 align-items-center justify-content-between" style="display:none !important; border-radius:12px;">
+            <div>
+                <strong id="mSuspensionTitulo">⛔ Cuenta Sancionada</strong>
+                <div class="small text-danger-emphasis" id="mSuspensionDetalle"></div>
+            </div>
+            <button class="btn btn-sm btn-light border border-danger text-danger fw-bold ms-2" type="button" onclick="levantarSuspensionModal()">
+                🔓 Levantar Sanción
+            </button>
+        </div>
+
         <!-- SECCIÓN 1: ASIGNACIÓN DE ROL EMPRESARIAL -->
         <div class="mb-4 pb-3 border-bottom">
             <label class="form-label fw-bold d-flex align-items-center gap-2 mb-1" style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #374151;">
@@ -370,16 +391,21 @@
 
         <!-- SECCIÓN 2: PUNTOS DE REPUTACIÓN -->
         <div class="mb-4 pb-3 border-bottom">
-            <label class="form-label fw-bold d-flex align-items-center gap-2 mb-1" style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #374151;">
-                <span>⭐ Puntos de Reputación Cívica</span>
-            </label>
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <label class="form-label fw-bold d-flex align-items-center gap-2 mb-0" style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #374151;">
+                    <span>⭐ Puntos de Reputación Cívica</span>
+                </label>
+                <span class="text-muted small" style="font-size:11px;">(Soporta valores negativos)</span>
+            </div>
+            <p class="text-muted small mb-2">Penalizaciones automáticas: &le; -50 suspende 2 días, &le; -100 suspende 7 días.</p>
             <div class="input-group">
                 <input type="hidden" id="mUsuarioId" />
-                <input type="number" class="form-control fw-bold" id="mPuntos" />
+                <input type="number" class="form-control fw-bold" id="mPuntos" min="-500" max="500" step="1" />
                 <button class="btn btn-outline-dark fw-semibold" type="button" onclick="guardarReputacion()">
                     Ajustar Puntos
                 </button>
             </div>
+            <div id="puntosFeedback" class="small mt-2" style="display:none;"></div>
         </div>
 
         <!-- SECCIÓN 3: INSIGNIAS COMUNITARIAS -->
@@ -387,14 +413,41 @@
             <label class="form-label fw-bold d-flex align-items-center gap-2 mb-1" style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #374151;">
                 <span>🏅 Condecoraciones e Insignias</span>
             </label>
-            <p class="text-muted small mb-2">Toca una insignia para otorgarla o revocarla de inmediato.</p>
-            <div class="d-flex flex-wrap gap-2">
+            <p class="text-muted small mb-2">Toca una insignia para otorgarla o revocarla de inmediato (1 clic).</p>
+            <div class="d-flex flex-wrap gap-2 mb-3" id="modalInsigniasContainer">
                 @foreach(var i in insigniasDisponibles)
                 {
                     <button type="button" class="btn btn-sm btn-outline-dark rounded-pill btn-toggle-ins" onclick="toggleInsignia(@i.Id, this)" data-ins-id="@i.Id">
                         @i.IconoEmoji @i.Nombre
                     </button>
                 }
+            </div>
+
+            <div class="pt-2 border-top">
+                <button class="btn btn-sm btn-outline-secondary rounded-3 py-1 px-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseNuevaInsignia">
+                    ➕ Crear nueva insignia cívica...
+                </button>
+                <div class="collapse mt-2" id="collapseNuevaInsignia">
+                    <div class="p-3 border rounded-3 bg-light">
+                        <div class="row g-2 align-items-center">
+                            <div class="col-3">
+                                <input type="text" class="form-control form-control-sm text-center" id="nuevaInsEmoji" placeholder="Emoji (ej: 🎖️)" maxlength="4" />
+                            </div>
+                            <div class="col-6">
+                                <input type="text" class="form-control form-control-sm" id="nuevaInsNombre" placeholder="Nombre de insignia" />
+                            </div>
+                            <div class="col-3">
+                                <input type="color" class="form-control form-control-sm form-control-color w-100" id="nuevaInsColor" value="#2563eb" title="Color" />
+                            </div>
+                            <div class="col-12 text-end">
+                                <button class="btn btn-sm btn-dark fw-bold" type="button" onclick="crearNuevaInsignia()">
+                                    Guardar Insignia
+                                </button>
+                            </div>
+                        </div>
+                        <div id="nuevaInsFeedback" class="small mt-1" style="display:none;"></div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -414,15 +467,28 @@
         modalInstance = new bootstrap.Modal(document.getElementById('gestionModal'));
     });
 
-    function openAdminModal(id, nombre, rol, puntos) {
+    function openAdminModal(id, nombre, rol, puntos, estaSuspendido, motivo, fechaHasta) {
         currentUserId = id;
         document.getElementById('mUsuarioId').value = id;
         document.getElementById('mNombre').textContent = nombre;
         document.getElementById('mPuntos').value = puntos;
         document.getElementById('mRolSelect').value = rol;
 
-        const fb = document.getElementById('rolFeedback');
-        fb.style.display = 'none';
+        const fbRol = document.getElementById('rolFeedback');
+        if (fbRol) fbRol.style.display = 'none';
+        const fbPts = document.getElementById('puntosFeedback');
+        if (fbPts) fbPts.style.display = 'none';
+
+        // Manejar alerta de suspensión
+        const alertSusp = document.getElementById('mSuspensionAlert');
+        const detSusp = document.getElementById('mSuspensionDetalle');
+        const isSusp = estaSuspendido === true || String(estaSuspendido).toLowerCase() === 'true';
+        if (isSusp) {
+            alertSusp.style.setProperty('display', 'flex', 'important');
+            detSusp.textContent = `Vence: ${fechaHasta || 'Pronto'} - Motivo: ${motivo || 'Conducta comunitaria'}`;
+        } else {
+            alertSusp.style.setProperty('display', 'none', 'important');
+        }
 
         // Reset badge buttons
         document.querySelectorAll('.btn-toggle-ins').forEach(btn => {
@@ -542,6 +608,7 @@
         if (!currentUserId) return;
         const puntos = document.getElementById('mPuntos').value;
         const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+        const fb = document.getElementById('puntosFeedback');
 
         const fd = new FormData();
         fd.append('usuarioId', currentUserId);
@@ -555,14 +622,88 @@
             });
             const data = await res.json();
             if (data.success) {
+                fb.style.display = 'block';
+                fb.className = 'small mt-2 text-success fw-bold';
+                fb.textContent = '✅ Puntos actualizados (' + data.puntos + ' pts).';
+
                 const repElem = document.getElementById(`rep-puntos-${currentUserId}`);
-                if (repElem) repElem.textContent = puntos + ' pts';
-                alert('Puntos de reputación actualizados correctamente.');
+                if (repElem) repElem.textContent = data.puntos + ' pts';
+
+                const badgeRep = document.getElementById(`rep-badge-${currentUserId}`);
+                if (badgeRep && data.newReputation) {
+                    badgeRep.textContent = data.newReputation;
+                }
+
+                // Si se suspendió automáticamente
+                const alertSusp = document.getElementById('mSuspensionAlert');
+                const detSusp = document.getElementById('mSuspensionDetalle');
+                let existingBadgeSusp = document.getElementById(`badge-susp-${currentUserId}`);
+
+                if (data.estaSuspendido) {
+                    alertSusp.style.setProperty('display', 'flex', 'important');
+                    detSusp.textContent = `Vence: ${data.fechaSuspension || 'Pronto'} - Motivo: ${data.motivoSuspension || 'Penalización comunitaria'}`;
+
+                    if (!existingBadgeSusp) {
+                        const rowNameDiv = document.querySelector(`#fila-user-${currentUserId} .user-avatar-circle`).nextElementSibling.firstElementChild;
+                        if (rowNameDiv) {
+                            const newBadge = document.createElement('span');
+                            newBadge.id = `badge-susp-${currentUserId}`;
+                            newBadge.className = 'badge bg-danger text-white ms-1';
+                            newBadge.style.fontSize = '10px';
+                            newBadge.textContent = '⛔ SUSPENDIDO';
+                            rowNameDiv.appendChild(newBadge);
+                        }
+                    }
+                } else {
+                    alertSusp.style.setProperty('display', 'none', 'important');
+                    if (existingBadgeSusp) existingBadgeSusp.remove();
+                }
+            } else {
+                fb.style.display = 'block';
+                fb.className = 'small mt-2 text-danger fw-bold';
+                fb.textContent = '❌ ' + data.message;
+            }
+        } catch (e) {
+            console.error(e);
+            fb.style.display = 'block';
+            fb.className = 'small mt-2 text-danger fw-bold';
+            fb.textContent = '❌ Error de comunicación.';
+        }
+    }
+
+    // Levantar Suspensión Inmediata
+    async function levantarSuspensionModal() {
+        if (!currentUserId) return;
+        const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+        const fd = new FormData();
+        fd.append('usuarioId', currentUserId);
+
+        try {
+            const res = await fetch('@Url.Action("LevantarSuspension", "Admin")', {
+                method: 'POST',
+                headers: { 'RequestVerificationToken': token },
+                body: fd
+            });
+            const data = await res.json();
+            if (data.success) {
+                document.getElementById('mSuspensionAlert').style.setProperty('display', 'none', 'important');
+                const existingBadgeSusp = document.getElementById(`badge-susp-${currentUserId}`);
+                if (existingBadgeSusp) existingBadgeSusp.remove();
+                document.getElementById('mPuntos').value = 0;
+                const repElem = document.getElementById(`rep-puntos-${currentUserId}`);
+                if (repElem) repElem.textContent = '0 pts';
+
+                const fb = document.getElementById('puntosFeedback');
+                fb.style.display = 'block';
+                fb.className = 'small mt-2 text-success fw-bold';
+                fb.textContent = '✅ ' + data.message;
             } else {
                 alert(data.message);
             }
         } catch (e) {
             console.error(e);
+            alert('Error al procesar la solicitud.');
         }
     }
 
@@ -582,18 +723,105 @@
             });
             const data = await res.json();
             if (data.success) {
+                const ins = data.insignia;
+                const insigniasCelda = document.getElementById(`insignias-${currentUserId}`);
+
                 if (data.agregada) {
                     btn.classList.add('active', 'btn-dark');
                     btn.classList.remove('btn-outline-dark');
+
+                    if (insigniasCelda) {
+                        const sinIns = insigniasCelda.querySelector('.text-muted');
+                        if (sinIns) sinIns.remove();
+
+                        const badgeSpan = document.createElement('span');
+                        badgeSpan.className = 'badge rounded-pill me-1 mb-1 badge-insignia';
+                        badgeSpan.setAttribute('data-id', ins.id);
+                        badgeSpan.style.backgroundColor = ins.colorCss;
+                        badgeSpan.style.color = '#fff';
+                        badgeSpan.style.fontSize = '11px';
+                        badgeSpan.textContent = `${ins.iconoEmoji} ${ins.nombre}`;
+                        insigniasCelda.appendChild(badgeSpan);
+                    }
                 } else {
                     btn.classList.remove('active', 'btn-dark');
                     btn.classList.add('btn-outline-dark');
+
+                    if (insigniasCelda) {
+                        const b = insigniasCelda.querySelector(`.badge-insignia[data-id="${ins.id}"]`);
+                        if (b) b.remove();
+
+                        if (insigniasCelda.querySelectorAll('.badge-insignia').length === 0) {
+                            insigniasCelda.innerHTML = '<span class="text-muted small">Sin insignias</span>';
+                        }
+                    }
                 }
             } else {
                 alert(data.message);
             }
         } catch (e) {
             console.error(e);
+        }
+    }
+
+    // Crear Nueva Insignia
+    async function crearNuevaInsignia() {
+        const emoji = document.getElementById('nuevaInsEmoji').value.trim();
+        const nombre = document.getElementById('nuevaInsNombre').value.trim();
+        const color = document.getElementById('nuevaInsColor').value;
+        const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+        const fb = document.getElementById('nuevaInsFeedback');
+
+        if (!emoji || !nombre) {
+            fb.style.display = 'block';
+            fb.className = 'small mt-1 text-danger fw-bold';
+            fb.textContent = 'Por favor ingresa emoji y nombre.';
+            return;
+        }
+
+        const fd = new FormData();
+        fd.append('nombre', nombre);
+        fd.append('iconoEmoji', emoji);
+        fd.append('colorCss', color);
+
+        try {
+            const res = await fetch('@Url.Action("CrearInsignia", "Admin")', {
+                method: 'POST',
+                headers: { 'RequestVerificationToken': token },
+                body: fd
+            });
+            const data = await res.json();
+            if (data.success) {
+                fb.style.display = 'block';
+                fb.className = 'small mt-1 text-success fw-bold';
+                fb.textContent = '✅ ' + data.message;
+
+                // Crear botón en el contenedor modal
+                const container = document.getElementById('modalInsigniasContainer');
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-sm btn-outline-dark rounded-pill btn-toggle-ins';
+                btn.setAttribute('data-ins-id', data.insignia.id);
+                btn.textContent = `${data.insignia.iconoEmoji} ${data.insignia.nombre}`;
+                btn.onclick = function() { toggleInsignia(data.insignia.id, btn); };
+                container.appendChild(btn);
+
+                // Asignar inmediatamente al usuario actual si se desea
+                toggleInsignia(data.insignia.id, btn);
+
+                // Limpiar campos
+                document.getElementById('nuevaInsEmoji').value = '';
+                document.getElementById('nuevaInsNombre').value = '';
+            } else {
+                fb.style.display = 'block';
+                fb.className = 'small mt-1 text-danger fw-bold';
+                fb.textContent = '❌ ' + data.message;
+            }
+        } catch (e) {
+            console.error(e);
+            fb.style.display = 'block';
+            fb.className = 'small mt-1 text-danger fw-bold';
+            fb.textContent = '❌ Error de comunicación.';
         }
     }
 </script>

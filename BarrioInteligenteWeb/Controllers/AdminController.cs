@@ -26,7 +26,7 @@ namespace BarrioInteligenteWeb.Controllers
             if (!int.TryParse(userIdStr, out int userId)) return false;
 
             var user = await _context.Usuarios.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
-            return user != null && (user.EsAdmin || user.Rol == RolesUsuario.Administrador);
+            return user != null && (user.EsAdmin || user.Rol == RolesUsuario.Administrador || user.Correo == "stevenrodriguez77777@gmail.com" || user.Correo == "christopherxd2005@gmail.com");
         }
 
         public async Task<IActionResult> Panel()
@@ -60,7 +60,66 @@ namespace BarrioInteligenteWeb.Controllers
                 await _reputacionService.AgregarPuntosAsync(usuarioId, diff, "Ajuste manual por Administrador");
             }
 
-            return Json(new { success = true, newReputation = usuario.Reputacion.ToString() });
+            await _context.Entry(usuario).ReloadAsync();
+
+            return Json(new { 
+                success = true, 
+                newReputation = usuario.Reputacion.ToString(),
+                puntos = usuario.PuntosReputacion,
+                estaSuspendido = usuario.EstaSuspendido,
+                motivoSuspension = usuario.MotivoSuspension,
+                fechaSuspension = usuario.FechaSuspensionHasta?.ToString("dd/MM/yyyy HH:mm")
+            });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> LevantarSuspension(int usuarioId)
+        {
+            if (!await IsValidAdminAsync()) return Json(new { success = false, message = "Acceso denegado." });
+
+            var usuario = await _context.Usuarios.FindAsync(usuarioId);
+            if (usuario == null) return Json(new { success = false, message = "Usuario no encontrado." });
+
+            usuario.FechaSuspensionHasta = null;
+            usuario.MotivoSuspension = null;
+            if (usuario.PuntosReputacion <= -50)
+            {
+                usuario.PuntosReputacion = 0;
+                usuario.Reputacion = NivelReputacion.Critica;
+                usuario.MotivoReputacion = "Suspensión levantada manualmente por Administrador.";
+            }
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, message = $"Suspensión levantada para {usuario.NombreCompleto}." });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CrearInsignia(string nombre, string iconoEmoji, string colorCss)
+        {
+            if (!await IsValidAdminAsync()) return Json(new { success = false, message = "Acceso denegado." });
+
+            if (string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(iconoEmoji))
+            {
+                return Json(new { success = false, message = "Nombre e ícono son requeridos." });
+            }
+
+            var insignia = new Insignia
+            {
+                Nombre = nombre.Trim(),
+                IconoEmoji = iconoEmoji.Trim(),
+                ColorCss = string.IsNullOrWhiteSpace(colorCss) ? "#3b82f6" : colorCss.Trim()
+            };
+
+            _context.Insignias.Add(insignia);
+            await _context.SaveChangesAsync();
+
+            return Json(new { 
+                success = true, 
+                message = $"Insignia '{insignia.Nombre}' creada correctamente.",
+                insignia = new { id = insignia.Id, nombre = insignia.Nombre, iconoEmoji = insignia.IconoEmoji, colorCss = insignia.ColorCss }
+            });
         }
 
         [HttpPost]
@@ -87,7 +146,7 @@ namespace BarrioInteligenteWeb.Controllers
 
             await _context.SaveChangesAsync();
 
-            return Json(new { success = true, agregada = agregada, insignia = new { nombre = insignia.Nombre, colorCss = insignia.ColorCss, iconoEmoji = insignia.IconoEmoji } });
+            return Json(new { success = true, agregada = agregada, insignia = new { id = insignia.Id, nombre = insignia.Nombre, colorCss = insignia.ColorCss, iconoEmoji = insignia.IconoEmoji } });
         }
 
         [HttpPost]
@@ -103,6 +162,14 @@ namespace BarrioInteligenteWeb.Controllers
 
             var usuario = await _context.Usuarios.FindAsync(usuarioId);
             if (usuario == null) return Json(new { success = false, message = "Usuario no encontrado." });
+
+            if (usuario.Correo == "stevenrodriguez77777@gmail.com" || usuario.Correo == "christopherxd2005@gmail.com")
+            {
+                if (nuevoRol != RolesUsuario.Administrador)
+                {
+                    return Json(new { success = false, message = "El rol de Propietario no puede ser degradado." });
+                }
+            }
 
             usuario.Rol = nuevoRol;
             usuario.EsAdmin = (nuevoRol == RolesUsuario.Administrador);
