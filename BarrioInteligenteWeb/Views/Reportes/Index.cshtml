@@ -199,7 +199,11 @@
     @await Html.PartialAsync("_AppHeader")
 
 
-    <div id="mapa"></div>
+    <div class="mapa-screen-wrap">
+        <div class="mapa-card-container">
+            <div id="mapa"></div>
+        </div>
+    </div>
 
     <!-- FAB fijo encima del bottom nav -->
     <a href="@Url.Action("Crear", "Reportes")" class="fab-fixed" aria-label="Crear reporte">

@@ -50,6 +50,8 @@ namespace BarrioInteligenteWeb.Controllers
             var id = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var usuario = _context.Usuarios.Include(u => u.Insignias).FirstOrDefault(u => u.Id == id);
             if (usuario == null) return RedirectToAction("Login");
+            ViewBag.FotoPerfil = usuario.FotoPerfil;
+            ViewBag.EsAdmin = usuario.EsAdmin || usuario.Rol == RolesUsuario.Administrador;
             return View(usuario);
         }
 
@@ -60,6 +62,8 @@ namespace BarrioInteligenteWeb.Controllers
             var id = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var usuario = _context.Usuarios.FirstOrDefault(u => u.Id == id);
             if (usuario == null) return RedirectToAction("Login");
+            ViewBag.FotoPerfil = usuario.FotoPerfil;
+            ViewBag.EsAdmin = usuario.EsAdmin || usuario.Rol == RolesUsuario.Administrador;
             return View(usuario);
         }
 
@@ -117,10 +121,12 @@ namespace BarrioInteligenteWeb.Controllers
                 new Claim(ClaimTypes.Email, usuario.Correo)
             };
 
-            if (usuario.EsAdmin)
+            if (usuario.EsAdmin || usuario.Rol == RolesUsuario.Administrador)
             {
                 claims.Add(new Claim(ClaimTypes.Role, "Admin"));
             }
+            claims.Add(new Claim("Rol", usuario.Rol ?? RolesUsuario.Ciudadano));
+
 
             var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             var principal = new ClaimsPrincipal(identity);

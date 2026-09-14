@@ -1,98 +1,401 @@
 @model IEnumerable<BarrioInteligenteWeb.Models.Usuario>
 @{
-    ViewData["Title"] = "Panel de Control";
-    var insigniasDisponibles = ViewBag.InsigniasDisponibles as List<BarrioInteligenteWeb.Models.Insignia>;
+    Layout = null;
+    ViewData["Title"] = "Panel de Control & RRHH";
+    ViewData["ActiveTab"] = "Admin";
+    var insigniasDisponibles = ViewBag.InsigniasDisponibles as List<BarrioInteligenteWeb.Models.Insignia> ?? new List<BarrioInteligenteWeb.Models.Insignia>();
+
+    var totalUsuarios = Model.Count();
+    var totalAdmins = Model.Count(u => u.Rol == BarrioInteligenteWeb.Models.RolesUsuario.Administrador || u.EsAdmin);
+    var totalInspectores = Model.Count(u => u.Rol == BarrioInteligenteWeb.Models.RolesUsuario.InspectorUrbano);
+    var totalModeradores = Model.Count(u => u.Rol == BarrioInteligenteWeb.Models.RolesUsuario.Moderador);
+    var totalCiudadanos = Model.Count(u => (u.Rol == BarrioInteligenteWeb.Models.RolesUsuario.Ciudadano || string.IsNullOrEmpty(u.Rol)) && !u.EsAdmin);
+    var totalStaff = totalAdmins + totalInspectores + totalModeradores;
 }
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Panel de Control & RRHH — Barrio Inteligente</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/barrio.css" asp-append-version="true" />
+    <style>
+        .admin-page-wrap {
+            width: 100%;
+            max-width: 1240px;
+            margin: 0 auto;
+            padding: 24px 16px 80px;
+        }
+        @@media (min-width: 769px) {
+            .admin-page-wrap {
+                padding: 32px 32px 60px;
+            }
+        }
 
-<div class="container py-5">
-    <h1 class="mb-4 text-danger"><i class="bi bi-shield-lock-fill"></i> Panel de Control (Admin)</h1>
+        /* Tarjetas de Métricas RRHH */
+        .hr-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+        @@media (min-width: 992px) {
+            .hr-stats-grid {
+                grid-template-columns: repeat(5, 1fr);
+                gap: 18px;
+            }
+        }
 
-    <div class="card shadow-sm border-0 rounded-4">
-        <div class="card-body p-0">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th class="ps-4">Usuario</th>
-                        <th>Reputación</th>
-                        <th>Insignias</th>
-                        <th class="text-end pe-4">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var u in Model)
-                    {
-                        <tr>
-                            <td class="ps-4">
-                                <div class="d-flex align-items-center gap-3">
-                                    <div style="width:40px;height:40px;border-radius:50%;background:#eee;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#555;">
-                                        @(string.IsNullOrEmpty(u.FotoPerfil) ? u.NombreCompleto.Substring(0,1).ToUpper() : $"<img src='{u.FotoPerfil}' style='width:100%;height:100%;border-radius:50%;object-fit:cover;' />")
-                                    </div>
-                                    <div>
-                                        <h6 class="mb-0 fw-bold">@u.NombreCompleto</h6>
-                                        <small class="text-muted">@u.Correo</small>
-                                        @if(u.EsAdmin){ <span class="badge bg-danger ms-2">Admin</span> }
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div><strong>@u.PuntosReputacion pts</strong></div>
-                                <span class="badge" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;">@u.Reputacion.ToString()</span>
-                            </td>
-                            <td id="insignias-@u.Id">
-                                @if (u.Insignias.Any())
-                                {
-                                    foreach (var i in u.Insignias)
-                                    {
-                                        <span class="badge rounded-pill me-1 mb-1 badge-insignia" data-id="@i.Id" style="background-color:@i.ColorCss;color:#fff;">
-                                            @i.IconoEmoji @i.Nombre
-                                        </span>
-                                    }
-                                }
-                                else
-                                {
-                                    <span class="text-muted small">Ninguna</span>
-                                }
-                            </td>
-                            <td class="text-end pe-4">
-                                <button class="btn btn-sm btn-outline-secondary rounded-3" onclick="openAdminModal(@u.Id, '@u.NombreCompleto', @u.PuntosReputacion)">
-                                    <i class="bi bi-gear-fill"></i> Gestionar
-                                </button>
-                            </td>
+        .hr-stat-card {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 16px 18px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .hr-stat-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .hr-stat-val {
+            font-size: 24px;
+            font-weight: 800;
+            color: #111;
+        }
+        .hr-stat-badge {
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 4px;
+            width: fit-content;
+        }
+
+        /* Tabla y Tarjeta Principal */
+        .admin-card {
+            background: #ffffff;
+            border-radius: 18px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+            overflow: hidden;
+        }
+
+        .admin-table-header {
+            padding: 18px 22px;
+            border-bottom: 1px solid #f1f5f9;
+            background: #ffffff;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Badges de Roles */
+        .badge-rol {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+        }
+        .badge-rol-admin {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+        .badge-rol-inspector {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+        }
+        .badge-rol-moderador {
+            background: #f3e8ff;
+            color: #6b21a8;
+            border: 1px solid #e9d5ff;
+        }
+        .badge-rol-ciudadano {
+            background: #f3f4f6;
+            color: #4b5563;
+            border: 1px solid #e5e7eb;
+        }
+
+        .user-avatar-circle {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: #f3f4f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            color: #374151;
+            overflow: hidden;
+            flex-shrink: 0;
+            border: 1px solid #e5e7eb;
+        }
+        .user-avatar-circle img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+            display: block;
+        }
+
+        /* Filtros */
+        .btn-filter {
+            border: 1px solid #e5e7eb;
+            background: #f9fafb;
+            color: #4b5563;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: all .2s;
+        }
+        .btn-filter.active, .btn-filter:hover {
+            background: #111;
+            color: #fff;
+            border-color: #111;
+        }
+    </style>
+</head>
+<body>
+<div class="app-screen">
+    @await Html.PartialAsync("_AppHeader")
+
+    <div class="admin-page-wrap">
+        <!-- Header de sección -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="badge" style="background:#8B1E1E;color:#fff;font-size:11px;padding:4px 8px;border-radius:6px;">ADMINISTRACIÓN & RRHH</span>
+                    <span class="text-muted small">• Solo visible por Steven (Admin)</span>
+                </div>
+                <h2 class="fw-bold mb-1" style="font-size:1.6rem; letter-spacing:-0.5px; color:#111;">Panel de Gestión de Personal y Ciudadanos</h2>
+                <p class="text-muted small mb-0">Control corporativo de roles operativos, reputación cívica y asignaciones de staff.</p>
+            </div>
+            <a href="@Url.Action("Index", "Reportes")" class="btn btn-outline-dark btn-sm rounded-pill px-3 fw-semibold">
+                ← Volver al Mapa
+            </a>
+        </div>
+
+        <!-- Tarjetas de Métricas -->
+        <div class="hr-stats-grid">
+            <div class="hr-stat-card">
+                <span class="hr-stat-label">Total Usuarios</span>
+                <span class="hr-stat-val">@totalUsuarios</span>
+                <span class="badge bg-light text-dark border hr-stat-badge">Registrados</span>
+            </div>
+            <div class="hr-stat-card" style="border-left: 3px solid #8B1E1E;">
+                <span class="hr-stat-label">Administradores</span>
+                <span class="hr-stat-val text-danger">@totalAdmins</span>
+                <span class="badge bg-danger text-white hr-stat-badge">Control Total</span>
+            </div>
+            <div class="hr-stat-card" style="border-left: 3px solid #2563eb;">
+                <span class="hr-stat-label">Inspectores</span>
+                <span class="hr-stat-val text-primary">@totalInspectores</span>
+                <span class="badge bg-primary text-white hr-stat-badge">En Terreno</span>
+            </div>
+            <div class="hr-stat-card" style="border-left: 3px solid #9333ea;">
+                <span class="hr-stat-label">Moderadores</span>
+                <span class="hr-stat-val" style="color:#9333ea;">@totalModeradores</span>
+                <span class="badge text-white hr-stat-badge" style="background:#9333ea;">Comunidad</span>
+            </div>
+            <div class="hr-stat-card" style="border-left: 3px solid #6b7280;">
+                <span class="hr-stat-label">Ciudadanos</span>
+                <span class="hr-stat-val text-secondary">@totalCiudadanos</span>
+                <span class="badge bg-light text-secondary border hr-stat-badge">Comunidad</span>
+            </div>
+        </div>
+
+        <!-- Tarjeta Principal con Tabla -->
+        <div class="admin-card">
+            <div class="admin-table-header">
+                <!-- Filtros por Rol -->
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <span class="small fw-bold text-muted text-uppercase me-1">Filtrar:</span>
+                    <button type="button" class="btn-filter active" onclick="filtrarUsuarios('todos', this)">Todos (@totalUsuarios)</button>
+                    <button type="button" class="btn-filter" onclick="filtrarUsuarios('staff', this)">Personal Staff (@totalStaff)</button>
+                    <button type="button" class="btn-filter" onclick="filtrarUsuarios('ciudadano', this)">Ciudadanos (@totalCiudadanos)</button>
+                </div>
+
+                <!-- Buscador rápido -->
+                <div style="min-width: 240px; max-width: 320px; width: 100%;">
+                    <input type="text" id="buscadorUsuarios" class="form-control form-control-sm rounded-pill" placeholder="🔍 Buscar por nombre o correo..." onkeyup="buscarUsuario()" />
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="tablaUsuarios">
+                    <thead class="table-light">
+                        <tr style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #6b7280;">
+                            <th class="ps-4 py-3">Colaborador / Ciudadano</th>
+                            <th class="py-3">Rol Corporativo</th>
+                            <th class="py-3">Reputación</th>
+                            <th class="py-3">Insignias</th>
+                            <th class="text-end pe-4 py-3">Acciones RRHH</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach (var u in Model)
+                        {
+                            var esAdminItem = u.EsAdmin || u.Rol == BarrioInteligenteWeb.Models.RolesUsuario.Administrador;
+                            var rolActual = !string.IsNullOrEmpty(u.Rol) ? u.Rol : (esAdminItem ? BarrioInteligenteWeb.Models.RolesUsuario.Administrador : BarrioInteligenteWeb.Models.RolesUsuario.Ciudadano);
+                            var esStaff = rolActual != BarrioInteligenteWeb.Models.RolesUsuario.Ciudadano;
+                            var tipoFiltro = esStaff ? "staff" : "ciudadano";
+
+                            string rolBadgeClass = rolActual switch {
+                                BarrioInteligenteWeb.Models.RolesUsuario.Administrador => "badge-rol-admin",
+                                BarrioInteligenteWeb.Models.RolesUsuario.InspectorUrbano => "badge-rol-inspector",
+                                BarrioInteligenteWeb.Models.RolesUsuario.Moderador => "badge-rol-moderador",
+                                _ => "badge-rol-ciudadano"
+                            };
+
+                            string rolEmoji = rolActual switch {
+                                BarrioInteligenteWeb.Models.RolesUsuario.Administrador => "🛡️",
+                                BarrioInteligenteWeb.Models.RolesUsuario.InspectorUrbano => "🔍",
+                                BarrioInteligenteWeb.Models.RolesUsuario.Moderador => "⚖️",
+                                _ => "🏡"
+                            };
+
+                            <tr class="fila-usuario" data-tipo="@tipoFiltro" data-nombre="@u.NombreCompleto.ToLower()" data-correo="@u.Correo.ToLower()" id="fila-user-@u.Id">
+                                <td class="ps-4 py-3">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="user-avatar-circle">
+                                            @if (!string.IsNullOrEmpty(u.FotoPerfil))
+                                            {
+                                                <img src="@u.FotoPerfil" alt="@u.NombreCompleto" />
+                                            }
+                                            else
+                                            {
+                                                <span>@(u.NombreCompleto.Length > 0 ? u.NombreCompleto.Substring(0,1).ToUpper() : "?")</span>
+                                            }
+                                        </div>
+                                        <div>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <h6 class="mb-0 fw-bold" style="color: #111;">@u.NombreCompleto</h6>
+                                                @if (u.Correo == "stevenrodriguez77777@gmail.com")
+                                                {
+                                                    <span class="badge bg-dark" style="font-size: 10px;">PROPIETARIO</span>
+                                                }
+                                            </div>
+                                            <small class="text-muted">@u.Correo</small>
+                                            <div class="small text-muted" style="font-size: 11px;">Registrado: @u.FechaRegistro.ToString("dd/MM/yyyy")</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge-rol @rolBadgeClass" id="rol-badge-@u.Id">
+                                        <span>@rolEmoji</span>
+                                        <span id="rol-texto-@u.Id">@rolActual</span>
+                                    </span>
+                                </td>
+                                <td>
+                                    <div><strong id="rep-puntos-@u.Id">@u.PuntosReputacion pts</strong></div>
+                                    <span class="badge" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-size:11px;">@u.Reputacion.ToString()</span>
+                                </td>
+                                <td id="insignias-@u.Id">
+                                    @if (u.Insignias.Any())
+                                    {
+                                        foreach (var i in u.Insignias)
+                                        {
+                                            <span class="badge rounded-pill me-1 mb-1 badge-insignia" data-id="@i.Id" style="background-color:@i.ColorCss;color:#fff;font-size:11px;">
+                                                @i.IconoEmoji @i.Nombre
+                                            </span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">Sin insignias</span>
+                                    }
+                                </td>
+                                <td class="text-end pe-4">
+                                    <button class="btn btn-sm btn-outline-dark rounded-3 px-3 fw-semibold" onclick="openAdminModal(@u.Id, '@u.NombreCompleto', '@rolActual', @u.PuntosReputacion)">
+                                        ⚙️ Gestionar Rol & Perfil
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
+
+    @await Html.PartialAsync("_BottomNav")
 </div>
 
-<!-- Modal Gestión Admin -->
-<div class="modal fade" id="gestionModal" tabIndex="-1">
+<!-- Modal Gestión Integral (RRHH Roles + Reputación + Insignias) -->
+<div class="modal fade" id="gestionModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content rounded-4 border-0 shadow-lg">
-      <div class="modal-header border-bottom-0 pb-0">
-        <h5 class="modal-title fw-bold">Gestionar <span id="mNombre" class="text-primary"></span></h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      <div class="modal-header border-bottom pb-3" style="background:#fafafa; border-radius: 16px 16px 0 0;">
+        <div>
+            <span class="badge bg-dark text-white mb-1" style="font-size: 10px;">GESTIÓN RRHH</span>
+            <h5 class="modal-title fw-bold mb-0" style="color:#111;">Gestionar: <span id="mNombre" class="text-danger"></span></h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
       </div>
-      <div class="modal-body">
+      <div class="modal-body p-4">
         
-        <form id="formReputacion">
-            <h6 class="fw-bold mb-3">Puntos de Reputación</h6>
-            <div class="input-group mb-4">
-                <input type="hidden" id="mUsuarioId" />
-                <input type="number" class="form-control" id="mPuntos" />
-                <button class="btn btn-dark" type="button" onclick="guardarReputacion()">Ajustar Puntos</button>
-            </div>
-        </form>
-
-        <h6 class="fw-bold mb-3">Insignias</h6>
-        <div class="d-flex flex-wrap gap-2">
-            @foreach(var i in insigniasDisponibles)
-            {
-                <button class="btn btn-sm btn-outline-dark rounded-pill btn-toggle-ins" onclick="toggleInsignia(@i.Id, this)" data-ins-id="@i.Id">
-                    @i.IconoEmoji @i.Nombre
+        <!-- SECCIÓN 1: ASIGNACIÓN DE ROL EMPRESARIAL -->
+        <div class="mb-4 pb-3 border-bottom">
+            <label class="form-label fw-bold d-flex align-items-center gap-2 mb-1" style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #374151;">
+                <span>👔 Rol Corporativo / Cargo</span>
+            </label>
+            <p class="text-muted small mb-2">Asigna los permisos del colaborador dentro de la organización de Barrio Inteligente.</p>
+            <div class="input-group">
+                <select class="form-select fw-semibold" id="mRolSelect">
+                    <option value="@BarrioInteligenteWeb.Models.RolesUsuario.Ciudadano">🏡 Ciudadano (Usuario Estándar)</option>
+                    <option value="@BarrioInteligenteWeb.Models.RolesUsuario.Moderador">⚖️ Moderador (Comunidad y Quejas)</option>
+                    <option value="@BarrioInteligenteWeb.Models.RolesUsuario.InspectorUrbano">🔍 Inspector Urbano (Inspección en Terreno)</option>
+                    <option value="@BarrioInteligenteWeb.Models.RolesUsuario.Administrador">🛡️ Administrador (Acceso y Control Total)</option>
+                </select>
+                <button class="btn btn-dark fw-bold px-3" type="button" onclick="guardarRol()">
+                    Asignar Rol
                 </button>
-            }
+            </div>
+            <div id="rolFeedback" class="small mt-2" style="display:none;"></div>
+        </div>
+
+        <!-- SECCIÓN 2: PUNTOS DE REPUTACIÓN -->
+        <div class="mb-4 pb-3 border-bottom">
+            <label class="form-label fw-bold d-flex align-items-center gap-2 mb-1" style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #374151;">
+                <span>⭐ Puntos de Reputación Cívica</span>
+            </label>
+            <div class="input-group">
+                <input type="hidden" id="mUsuarioId" />
+                <input type="number" class="form-control fw-bold" id="mPuntos" />
+                <button class="btn btn-outline-dark fw-semibold" type="button" onclick="guardarReputacion()">
+                    Ajustar Puntos
+                </button>
+            </div>
+        </div>
+
+        <!-- SECCIÓN 3: INSIGNIAS COMUNITARIAS -->
+        <div>
+            <label class="form-label fw-bold d-flex align-items-center gap-2 mb-1" style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #374151;">
+                <span>🏅 Condecoraciones e Insignias</span>
+            </label>
+            <p class="text-muted small mb-2">Toca una insignia para otorgarla o revocarla de inmediato.</p>
+            <div class="d-flex flex-wrap gap-2">
+                @foreach(var i in insigniasDisponibles)
+                {
+                    <button type="button" class="btn btn-sm btn-outline-dark rounded-pill btn-toggle-ins" onclick="toggleInsignia(@i.Id, this)" data-ins-id="@i.Id">
+                        @i.IconoEmoji @i.Nombre
+                    </button>
+                }
+            </div>
         </div>
 
       </div>
@@ -102,36 +405,141 @@
 
 @Html.AntiForgeryToken()
 
-@section Scripts {
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     let currentUserId = null;
-    const modal = new bootstrap.Modal(document.getElementById('gestionModal'));
+    let modalInstance = null;
 
-    function openAdminModal(id, nombre, puntos) {
+    document.addEventListener('DOMContentLoaded', () => {
+        modalInstance = new bootstrap.Modal(document.getElementById('gestionModal'));
+    });
+
+    function openAdminModal(id, nombre, rol, puntos) {
         currentUserId = id;
         document.getElementById('mUsuarioId').value = id;
         document.getElementById('mNombre').textContent = nombre;
         document.getElementById('mPuntos').value = puntos;
+        document.getElementById('mRolSelect').value = rol;
+
+        const fb = document.getElementById('rolFeedback');
+        fb.style.display = 'none';
 
         // Reset badge buttons
-        document.querySelectorAll('.btn-toggle-ins').forEach(btn => btn.classList.remove('active', 'btn-dark'));
-        
-        // Poner activos los que el usuario ya tiene según el DOM
-        const insigniasCelda = document.getElementById(`insignias-${id}`);
-        insigniasCelda.querySelectorAll('.badge-insignia').forEach(badge => {
-            const insId = badge.getAttribute('data-id');
-            const bt = document.querySelector(`.btn-toggle-ins[data-ins-id="${insId}"]`);
-            if(bt) {
-                bt.classList.add('active', 'btn-dark');
-                bt.classList.remove('btn-outline-dark');
-            }
+        document.querySelectorAll('.btn-toggle-ins').forEach(btn => {
+            btn.classList.remove('active', 'btn-dark');
+            btn.classList.add('btn-outline-dark');
         });
+        
+        // Activar insignias actuales del usuario
+        const insigniasCelda = document.getElementById(`insignias-${id}`);
+        if (insigniasCelda) {
+            insigniasCelda.querySelectorAll('.badge-insignia').forEach(badge => {
+                const insId = badge.getAttribute('data-id');
+                const bt = document.querySelector(`.btn-toggle-ins[data-ins-id="${insId}"]`);
+                if(bt) {
+                    bt.classList.add('active', 'btn-dark');
+                    bt.classList.remove('btn-outline-dark');
+                }
+            });
+        }
 
-        modal.show();
+        if (modalInstance) {
+            modalInstance.show();
+        }
     }
 
+    // Filtros de tabla (Todos / Staff / Ciudadanos)
+    function filtrarUsuarios(tipo, btn) {
+        document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        const filas = document.querySelectorAll('.fila-usuario');
+        filas.forEach(f => {
+            if (tipo === 'todos') {
+                f.style.display = '';
+            } else if (tipo === 'staff') {
+                f.style.display = f.getAttribute('data-tipo') === 'staff' ? '' : 'none';
+            } else if (tipo === 'ciudadano') {
+                f.style.display = f.getAttribute('data-tipo') === 'ciudadano' ? '' : 'none';
+            }
+        });
+    }
+
+    // Buscador instantáneo
+    function buscarUsuario() {
+        const query = document.getElementById('buscadorUsuarios').value.toLowerCase().trim();
+        const filas = document.querySelectorAll('.fila-usuario');
+        filas.forEach(f => {
+            const nom = f.getAttribute('data-nombre') || '';
+            const cor = f.getAttribute('data-correo') || '';
+            if (nom.includes(query) || cor.includes(query)) {
+                f.style.display = '';
+            } else {
+                f.style.display = 'none';
+            }
+        });
+    }
+
+    // Asignar Rol vía AJAX
+    async function guardarRol() {
+        if (!currentUserId) return;
+        const nuevoRol = document.getElementById('mRolSelect').value;
+        const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+        const fd = new FormData();
+        fd.append('usuarioId', currentUserId);
+        fd.append('nuevoRol', nuevoRol);
+
+        const fb = document.getElementById('rolFeedback');
+
+        try {
+            const res = await fetch('@Url.Action("AsignarRol", "Admin")', {
+                method: 'POST',
+                headers: { 'RequestVerificationToken': token },
+                body: fd
+            });
+            const data = await res.json();
+            if (data.success) {
+                fb.style.display = 'block';
+                fb.className = 'small mt-2 text-success fw-bold';
+                fb.textContent = '✅ ' + data.message;
+
+                // Actualizar badge en la tabla en tiempo real
+                const badge = document.getElementById(`rol-badge-${currentUserId}`);
+                const texto = document.getElementById(`rol-texto-${currentUserId}`);
+                if (badge && texto) {
+                    texto.textContent = data.nuevoRol;
+                    badge.className = 'badge-rol ' + getBadgeRolClass(data.nuevoRol);
+                }
+
+                // Actualizar atributo de filtro
+                const fila = document.getElementById(`fila-user-${currentUserId}`);
+                if (fila) {
+                    fila.setAttribute('data-tipo', data.nuevoRol === 'Ciudadano' ? 'ciudadano' : 'staff');
+                }
+            } else {
+                fb.style.display = 'block';
+                fb.className = 'small mt-2 text-danger fw-bold';
+                fb.textContent = '❌ ' + data.message;
+            }
+        } catch (e) {
+            console.error(e);
+            fb.style.display = 'block';
+            fb.className = 'small mt-2 text-danger fw-bold';
+            fb.textContent = '❌ Error de comunicación con el servidor.';
+        }
+    }
+
+    function getBadgeRolClass(rol) {
+        if (rol === 'Administrador') return 'badge-rol-admin';
+        if (rol === 'Inspector Urbano') return 'badge-rol-inspector';
+        if (rol === 'Moderador') return 'badge-rol-moderador';
+        return 'badge-rol-ciudadano';
+    }
+
+    // Ajustar Reputación vía AJAX
     async function guardarReputacion() {
-        if(!currentUserId) return;
+        if (!currentUserId) return;
         const puntos = document.getElementById('mPuntos').value;
         const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
 
@@ -141,18 +549,26 @@
 
         try {
             const res = await fetch('@Url.Action("AjustarReputacion", "Admin")', {
-                method: 'POST', headers: { 'RequestVerificationToken': token }, body: fd
+                method: 'POST',
+                headers: { 'RequestVerificationToken': token },
+                body: fd
             });
             const data = await res.json();
-            if(data.success) {
-                alert('Reputación ajustada correctamente.');
-                location.reload(); // Recarga simple para UI consistente
-            } else { alert(data.message); }
-        }catch(e){}
+            if (data.success) {
+                const repElem = document.getElementById(`rep-puntos-${currentUserId}`);
+                if (repElem) repElem.textContent = puntos + ' pts';
+                alert('Puntos de reputación actualizados correctamente.');
+            } else {
+                alert(data.message);
+            }
+        } catch (e) {
+            console.error(e);
+        }
     }
 
+    // Toggle Insignia vía AJAX
     async function toggleInsignia(insigniaId, btn) {
-        if(!currentUserId) return;
+        if (!currentUserId) return;
         const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
         const fd = new FormData();
         fd.append('usuarioId', currentUserId);
@@ -160,19 +576,27 @@
 
         try {
             const res = await fetch('@Url.Action("ToggleInsignia", "Admin")', {
-                method: 'POST', headers: { 'RequestVerificationToken': token }, body: fd
+                method: 'POST',
+                headers: { 'RequestVerificationToken': token },
+                body: fd
             });
             const data = await res.json();
-            if(data.success) {
-                if(data.agregada) {
+            if (data.success) {
+                if (data.agregada) {
                     btn.classList.add('active', 'btn-dark');
                     btn.classList.remove('btn-outline-dark');
                 } else {
                     btn.classList.remove('active', 'btn-dark');
                     btn.classList.add('btn-outline-dark');
                 }
-            } else { alert(data.message); }
-        }catch(e){ console.error(e); }
+            } else {
+                alert(data.message);
+            }
+        } catch (e) {
+            console.error(e);
+        }
     }
 </script>
-}
+</body>
+</html>
+

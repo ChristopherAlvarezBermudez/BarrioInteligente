@@ -48,6 +48,24 @@ namespace BarrioInteligenteWeb.Models
 
         public bool EsAdmin { get; set; } = false;
 
+        public string Rol { get; set; } = RolesUsuario.Ciudadano;
+
         public virtual ICollection<Insignia> Insignias { get; set; } = new List<Insignia>();
+    }
+
+    public static class RolesUsuario
+    {
+        public const string Administrador = "Administrador";
+        public const string InspectorUrbano = "Inspector Urbano";
+        public const string Moderador = "Moderador";
+        public const string Ciudadano = "Ciudadano";
+
+        public static readonly string[] Todos = new[]
+        {
+            Administrador,
+            InspectorUrbano,
+            Moderador,
+            Ciudadano
+        };
     }
 }

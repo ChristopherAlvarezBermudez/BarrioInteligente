@@ -30,6 +30,12 @@
         .location-confirmed {
             background: #f0fff4 !important;
             border-color: #34d399 !important;
+            color: #065f46 !important;
+        }
+        .location-invalid {
+            background: #fff0f0 !important;
+            border-color: #ef4444 !important;
+            color: #b91c1c !important;
         }
     </style>
 </head>
@@ -184,13 +190,119 @@
 
     let timeoutGeocoding = null;
 
+    // Polígono terrestre de la República Dominicana
+    const polyRD = [
+        [19.75, -71.74], [19.92, -71.65], [19.95, -71.00], [19.85, -70.65],
+        [19.68, -69.95], [19.40, -69.80], [19.35, -69.25], [19.23, -69.10],
+        [19.16, -69.25], [19.05, -69.45], [19.03, -68.90], [18.75, -68.40],
+        [18.55, -68.30], [18.30, -68.40], [18.10, -68.65], [18.33, -68.85],
+        [18.40, -69.00], [18.42, -69.35], [18.42, -69.70], [18.44, -70.00],
+        [18.20, -70.25], [18.18, -70.55], [18.35, -70.65], [18.25, -71.05],
+        [18.20, -71.08], [18.05, -71.10], [17.85, -71.25], [17.75, -71.40],
+        [17.55, -71.52], [17.85, -71.70], [18.03, -71.75], [18.35, -71.72],
+        [18.50, -71.86], [18.68, -71.75], [18.88, -71.71], [19.12, -71.71],
+        [19.32, -71.70], [19.55, -71.72], [19.75, -71.74]
+    ];
+
+    function estaEnTerritorioDominicano(lat, lon) {
+        let inside = false;
+        for (let i = 0, j = polyRD.length - 1; i < polyRD.length; j = i++) {
+            const xi = polyRD[i][0], yi = polyRD[i][1];
+            const xj = polyRD[j][0], yj = polyRD[j][1];
+            const intersect = ((yi > lon) !== (yj > lon))
+                && (lat < (xj - xi) * (lon - yi) / (yj - yi) + xi);
+            if (intersect) inside = !inside;
+        }
+        return inside;
+    }
+
+    function rechazarUbicacion(mensaje) {
+        document.getElementById('Latitud').value = 0;
+        document.getElementById('Longitud').value = 0;
+        document.getElementById('Ubicacion').value = '';
+        document.getElementById('DireccionFisica').value = '';
+        
+        const locField = document.getElementById('locationField');
+        locField.classList.remove('location-confirmed');
+        locField.classList.add('location-invalid');
+        
+        document.getElementById('ubicacionTexto').textContent = mensaje;
+        document.getElementById('mapPickerHint').innerHTML = '<span style="color:#dc2626;font-weight:700;">⚠️ Punto fuera de zona: Selecciona un punto en tierra firme dentro de la República Dominicana.</span>';
+        
+        const btnSubir = document.getElementById('btnSubir');
+        if (btnSubir) {
+            btnSubir.disabled = true;
+            btnSubir.style.opacity = '0.5';
+            btnSubir.style.cursor = 'not-allowed';
+        }
+    }
+
+    function confirmarUbicacionValida(lat, lon, direccion) {
+        document.getElementById('Latitud').value = lat;
+        document.getElementById('Longitud').value = lon;
+        document.getElementById('Ubicacion').value = 'Lat: ' + lat.toFixed(5) + ', Lon: ' + lon.toFixed(5);
+        
+        const locField = document.getElementById('locationField');
+        locField.classList.remove('location-invalid');
+        locField.classList.add('location-confirmed');
+        
+        if (direccion) {
+            document.getElementById('DireccionFisica').value = direccion;
+            document.getElementById('ubicacionTexto').textContent = '📍 ' + direccion;
+        } else {
+            document.getElementById('ubicacionTexto').textContent = '📍 Lat ' + lat.toFixed(5) + ', Lon ' + lon.toFixed(5);
+        }
+        
+        document.getElementById('mapPickerHint').textContent = '✅ Ubicación dominicana confirmada. Toca otro punto para cambiar.';
+        
+        const btnSubir = document.getElementById('btnSubir');
+        if (btnSubir) {
+            btnSubir.disabled = false;
+            btnSubir.style.opacity = '1';
+            btnSubir.style.cursor = 'pointer';
+        }
+    }
+
     async function obtenerDireccion(lat, lon) {
+        // Validación geográfica preliminar en polígono
+        if (!estaEnTerritorioDominicano(lat, lon)) {
+            if (lon < -71.72) {
+                rechazarUbicacion('❌ Ubicación en territorio de Haití o frontera no permitida.');
+            } else {
+                rechazarUbicacion('❌ Ubicación en el mar o aguas abiertas. Toca tierra firme.');
+            }
+            return;
+        }
+
         try {
-            document.getElementById('ubicacionTexto').textContent = '📍 Buscando dirección...';
+            document.getElementById('ubicacionTexto').textContent = '📍 Verificando territorio dominicano...';
             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`);
             if (res.ok) {
                 const data = await res.json();
                 
+                // 1. Validar país
+                if (data.address && data.address.country_code && data.address.country_code !== 'do') {
+                    rechazarUbicacion('❌ Ubicación fuera de República Dominicana (' + (data.address.country || 'Territorio Extranjero') + ').');
+                    return;
+                }
+
+                // 2. Validar que no sea agua abierta o mar
+                const esAgua = data.type === 'water' || data.category === 'natural' ||
+                    (data.display_name && (data.display_name.toLowerCase().includes('mar caribe') || 
+                                           data.display_name.toLowerCase().includes('océano atlántico') || 
+                                           data.display_name.toLowerCase().includes('caribbean sea')));
+
+                const tieneDireccionTerrestre = data.address && (
+                    data.address.road || data.address.pedestrian || data.address.suburb || 
+                    data.address.neighbourhood || data.address.village || data.address.city_district || 
+                    data.address.town || data.address.city || data.address.hamlet
+                );
+
+                if (esAgua && !tieneDireccionTerrestre) {
+                    rechazarUbicacion('❌ Ubicación en el mar o agua. Selecciona un punto en tierra firme.');
+                    return;
+                }
+
                 let direccion = "";
                 if (data.address) {
                     const calle = data.address.road || data.address.pedestrian || "";
@@ -206,29 +318,31 @@
                 }
                 
                 if (!direccion) direccion = data.display_name;
-
-                document.getElementById('DireccionFisica').value = direccion;
-                document.getElementById('ubicacionTexto').textContent = '📍 ' + direccion;
+                confirmarUbicacionValida(lat, lon, direccion);
             } else {
-                document.getElementById('ubicacionTexto').textContent = '📍 Lat ' + lat.toFixed(5) + ', Lon ' + lon.toFixed(5);
+                confirmarUbicacionValida(lat, lon, null);
             }
         } catch (error) {
             console.error("Geocoding error", error);
-            document.getElementById('ubicacionTexto').textContent = '📍 Lat ' + lat.toFixed(5) + ', Lon ' + lon.toFixed(5);
+            confirmarUbicacionValida(lat, lon, null);
         }
     }
 
     function actualizarCoordenadas(lat, lon) {
-        document.getElementById('Latitud').value = lat;
-        document.getElementById('Longitud').value = lon;
-        document.getElementById('Ubicacion').value = 'Lat: ' + lat.toFixed(5) + ', Lon: ' + lon.toFixed(5);
-        document.getElementById('locationField').classList.add('location-confirmed');
-        document.getElementById('mapPickerHint').textContent = '✅ Ubicación confirmada. Toca otro punto para cambiar.';
-        
-        // DebounceNominatim
+        // DebounceNominatim con validación previa
         clearTimeout(timeoutGeocoding);
-        document.getElementById('ubicacionTexto').textContent = '📍 Lat ' + lat.toFixed(5) + ', Lon ' + lon.toFixed(5);
-        timeoutGeocoding = setTimeout(() => obtenerDireccion(lat, lon), 700);
+        
+        if (!estaEnTerritorioDominicano(lat, lon)) {
+            if (lon < -71.72) {
+                rechazarUbicacion('❌ Ubicación en territorio haitiano o extranjero no permitida.');
+            } else {
+                rechazarUbicacion('❌ Ubicación en el mar. Debe ser en tierra firme en Rep. Dominicana.');
+            }
+            return;
+        }
+
+        document.getElementById('ubicacionTexto').textContent = '📍 Verificando coordenadas (' + lat.toFixed(4) + ', ' + lon.toFixed(4) + ')...';
+        timeoutGeocoding = setTimeout(() => obtenerDireccion(lat, lon), 400);
     }
 
     pickerMap.on('click', function (e) {

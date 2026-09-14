@@ -26,12 +26,12 @@ namespace BarrioInteligenteWeb.Controllers
             if (!int.TryParse(userIdStr, out int userId)) return false;
 
             var user = await _context.Usuarios.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
-            return user != null && user.EsAdmin;
+            return user != null && (user.EsAdmin || user.Rol == RolesUsuario.Administrador);
         }
 
         public async Task<IActionResult> Panel()
         {
-            if (!await IsValidAdminAsync()) return RedirectToAction("Comunidad", "Reportes");
+            if (!await IsValidAdminAsync()) return RedirectToAction("Index", "Reportes");
 
             var usuarios = await _context.Usuarios
                 .Include(u => u.Insignias)
@@ -88,6 +88,33 @@ namespace BarrioInteligenteWeb.Controllers
             await _context.SaveChangesAsync();
 
             return Json(new { success = true, agregada = agregada, insignia = new { nombre = insignia.Nombre, colorCss = insignia.ColorCss, iconoEmoji = insignia.IconoEmoji } });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AsignarRol(int usuarioId, string nuevoRol)
+        {
+            if (!await IsValidAdminAsync()) return Json(new { success = false, message = "Acceso denegado." });
+
+            if (!RolesUsuario.Todos.Contains(nuevoRol))
+            {
+                return Json(new { success = false, message = "Rol no reconocido por el sistema." });
+            }
+
+            var usuario = await _context.Usuarios.FindAsync(usuarioId);
+            if (usuario == null) return Json(new { success = false, message = "Usuario no encontrado." });
+
+            usuario.Rol = nuevoRol;
+            usuario.EsAdmin = (nuevoRol == RolesUsuario.Administrador);
+
+            await _context.SaveChangesAsync();
+
+            return Json(new { 
+                success = true, 
+                message = $"Rol de {usuario.NombreCompleto} actualizado a {nuevoRol}.",
+                nuevoRol = usuario.Rol,
+                esAdmin = usuario.EsAdmin
+            });
         }
 
         [HttpPost]

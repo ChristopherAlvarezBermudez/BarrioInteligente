@@ -875,10 +875,55 @@ a:hover {
     }
 }
 
-/* Adaptación del Mapa a pantalla completa en Desktop */
-@media (min-width: 769px) {
+/* Enmarcado del Mapa en Desktop / Laptops (con bordes blancos y marco limpio) */
+.mapa-screen-wrap {
+    width: 100%;
+    height: calc(100dvh - 57px - 64px);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.mapa-card-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+@media (max-width: 768px) {
+    .mapa-screen-wrap {
+        height: calc(100dvh - 57px - 64px);
+    }
     #mapa {
-        height: calc(100vh - 58px) !important;
+        width: 100%;
+        height: 100%;
+        border-radius: 0;
+    }
+}
+
+@media (min-width: 769px) {
+    .mapa-screen-wrap {
+        height: calc(100vh - 58px);
+        padding: 16px 24px 20px 24px;
+        max-width: 1560px;
+        margin: 0 auto;
+    }
+
+    .mapa-card-container {
+        width: 100%;
+        height: 100%;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 18px;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+        position: relative;
+    }
+
+    #mapa {
+        width: 100%;
+        height: 100% !important;
+        border-radius: 17px;
     }
 }
 
@@ -936,5 +981,39 @@ a:hover {
         box-shadow: 0 4px 20px rgba(0,0,0,0.04);
     }
 }
+
+/* ── Perfil Responsivo (Móvil centrado / Desktop tarjeta elegante) ── */
+.perfil-desktop-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 16px 100px;
+}
+
+.perfil-card-box {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+@media (min-width: 769px) {
+    .perfil-desktop-container {
+        padding: 36px 24px 60px;
+    }
+
+    .perfil-card-box {
+        max-width: 580px;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 20px;
+        box-shadow: 0 6px 28px rgba(0, 0, 0, 0.04);
+        padding: 36px 36px 40px;
+    }
+}
+
 
 

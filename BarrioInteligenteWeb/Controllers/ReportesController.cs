@@ -193,9 +193,35 @@ namespace BarrioInteligenteWeb.Controllers
             return View();
         }
 
-        private bool EsUbicacionValida(double lat, double lng)
+        private static readonly (double lat, double lon)[] PolyTerritorioRD = new[]
         {
-            return lat >= 17.5 && lat <= 20.0 && lng >= -72.0 && lng <= -68.3;
+            (19.75, -71.74), (19.92, -71.65), (19.95, -71.00), (19.85, -70.65),
+            (19.68, -69.95), (19.40, -69.80), (19.35, -69.25), (19.23, -69.10),
+            (19.16, -69.25), (19.05, -69.45), (19.03, -68.90), (18.75, -68.40),
+            (18.55, -68.30), (18.30, -68.40), (18.10, -68.65), (18.33, -68.85),
+            (18.40, -69.00), (18.42, -69.35), (18.42, -69.70), (18.44, -70.00),
+            (18.20, -70.25), (18.18, -70.55), (18.35, -70.65), (18.25, -71.05),
+            (18.20, -71.08), (18.05, -71.10), (17.85, -71.25), (17.75, -71.40),
+            (17.55, -71.52), (17.85, -71.70), (18.03, -71.75), (18.35, -71.72),
+            (18.50, -71.86), (18.68, -71.75), (18.88, -71.71), (19.12, -71.71),
+            (19.32, -71.70), (19.55, -71.72), (19.75, -71.74)
+        };
+
+        private static bool EsUbicacionValida(double lat, double lng)
+        {
+            if (lat < 17.50 || lat > 20.00 || lng < -71.86 || lng > -68.25)
+                return false;
+
+            bool inside = false;
+            for (int i = 0, j = PolyTerritorioRD.Length - 1; i < PolyTerritorioRD.Length; j = i++)
+            {
+                var pi = PolyTerritorioRD[i];
+                var pj = PolyTerritorioRD[j];
+                bool intersect = ((pi.lon > lng) != (pj.lon > lng))
+                    && (lat < (pj.lat - pi.lat) * (lng - pi.lon) / (pj.lon - pi.lon) + pi.lat);
+                if (intersect) inside = !inside;
+            }
+            return inside;
         }
 
         [HttpPost]
@@ -206,7 +232,8 @@ namespace BarrioInteligenteWeb.Controllers
             {
                 if (!EsUbicacionValida(reporte.Latitud, reporte.Longitud))
                 {
-                    ModelState.AddModelError(string.Empty, "Barrio Inteligente actualmente solo opera dentro del territorio de la República Dominicana.");
+                    ModelState.AddModelError(string.Empty, "La ubicación debe estar dentro del territorio terrestre de la República Dominicana (no en el mar ni en territorio extranjero).");
+                    ViewBag.ErrorGuardado = "La ubicación seleccionada está en el mar o fuera de la República Dominicana.";
                     ViewBag.FotoPerfil = _context.Usuarios
                         .Where(u => u.Id == UsuarioActualId)
                         .Select(u => u.FotoPerfil)
