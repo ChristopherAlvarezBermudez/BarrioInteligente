@@ -42,10 +42,12 @@ namespace BarrioInteligenteWeb.Controllers
             try
             {
                 var lista = _context.Reportes
+                    .AsNoTracking()
                     .OrderByDescending(r => r.Fecha)
                     .ToList();
                 ViewBag.UsuarioId = UsuarioActualId;
                 ViewBag.FotoPerfil = _context.Usuarios
+                    .AsNoTracking()
                     .Where(u => u.Id == UsuarioActualId)
                     .Select(u => u.FotoPerfil)
                     .FirstOrDefault();
@@ -63,10 +65,12 @@ namespace BarrioInteligenteWeb.Controllers
             try
             {
                 var lista = _context.Reportes
+                    .AsNoTracking()
                     .Where(r => r.UsuarioId == UsuarioActualId)
                     .OrderByDescending(r => r.Fecha)
                     .ToList();
                 ViewBag.FotoPerfil = _context.Usuarios
+                    .AsNoTracking()
                     .Where(u => u.Id == UsuarioActualId)
                     .Select(u => u.FotoPerfil)
                     .FirstOrDefault();
@@ -85,16 +89,19 @@ namespace BarrioInteligenteWeb.Controllers
             try
             {
                 var reportesCategorias = await _context.Reportes
+                    .AsNoTracking()
                     .GroupBy(r => r.Categoria)
                     .Select(g => new { Categoria = g.Key, Count = g.Count() })
                     .ToListAsync();
 
                 var reportesEstados = await _context.Reportes
+                    .AsNoTracking()
                     .GroupBy(r => r.Estado)
                     .Select(g => new { Estado = g.Key, Count = g.Count() })
                     .ToListAsync();
 
                 var topUsuarios = await _context.Usuarios
+                    .AsNoTracking()
                     .OrderBy(u => u.Reputacion)
                     .ThenByDescending(u => u.PuntosReputacion)
                     .Take(3)
@@ -105,6 +112,7 @@ namespace BarrioInteligenteWeb.Controllers
                 ViewBag.TopCiudadanos = topUsuarios;
                 
                 ViewBag.FotoPerfil = await _context.Usuarios
+                    .AsNoTracking()
                     .Where(u => u.Id == UsuarioActualId)
                     .Select(u => u.FotoPerfil)
                     .FirstOrDefaultAsync();
@@ -123,6 +131,7 @@ namespace BarrioInteligenteWeb.Controllers
             try
             {
                 var query = _context.Reportes
+                    .AsNoTracking()
                     .Include(r => r.Usuario)
                     .Where(r => r.TipoPost == tipo || (tipo == "Reporte" && string.IsNullOrEmpty(r.TipoPost)))
                     .AsEnumerable(); // Haversine
@@ -158,11 +167,12 @@ namespace BarrioInteligenteWeb.Controllers
                 ViewBag.FiltroActivo = filtro;
                 ViewBag.TipoActual = tipo;
                 ViewBag.FotoPerfil = _context.Usuarios
+                    .AsNoTracking()
                     .Where(u => u.Id == UsuarioActualId)
                     .Select(u => u.FotoPerfil)
                     .FirstOrDefault();
 
-                var usuarioLocal = _context.Usuarios.FirstOrDefault(u => u.Id == UsuarioActualId);
+                var usuarioLocal = _context.Usuarios.AsNoTracking().FirstOrDefault(u => u.Id == UsuarioActualId);
                 ViewBag.EsAdmin = usuarioLocal != null && usuarioLocal.EsAdmin;
 
                 return View(lista);
@@ -268,10 +278,11 @@ namespace BarrioInteligenteWeb.Controllers
         {
             try
             {
-                var usuarioLocal = _context.Usuarios.FirstOrDefault(u => u.Id == UsuarioActualId);
+                var usuarioLocal = _context.Usuarios.AsNoTracking().FirstOrDefault(u => u.Id == UsuarioActualId);
                 ViewBag.EsAdmin = usuarioLocal != null && usuarioLocal.EsAdmin;
                 ViewBag.UsuarioId = UsuarioActualId;
                 var reporte = _context.Reportes
+                    .AsNoTracking()
                     .Include(r => r.Usuario)
                     .FirstOrDefault(r => r.Id == id);
 
@@ -282,6 +293,7 @@ namespace BarrioInteligenteWeb.Controllers
                 }
 
                 var comentarios = _context.Comentarios
+                    .AsNoTracking()
                     .Include(c => c.Usuario)
                     .Include(c => c.Likes) // Estado Like
                     .Where(c => c.ReporteId == id)
@@ -289,6 +301,7 @@ namespace BarrioInteligenteWeb.Controllers
                     .ToList();
 
                 var yaVoto = _context.Validaciones
+                    .AsNoTracking()
                     .Any(v => v.ReporteId == id && v.UsuarioId == UsuarioActualId);
 
                 return View(new ReporteDetalleViewModel

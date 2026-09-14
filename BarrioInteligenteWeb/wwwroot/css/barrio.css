@@ -16,26 +16,160 @@ html, body {
 
 /* ---- Pantalla raíz de la app ---- */
 .app-screen {
-    max-width: 430px;
+    width: 100%;
+    max-width: 480px;
     min-height: 100dvh;
     margin: 0 auto;
     background: #ffffff;
     display: flex;
     flex-direction: column;
     position: relative;
+    box-shadow: 0 0 25px rgba(0,0,0,0.03);
 }
 
-/* ---- Header superior ---- */
+@media (min-width: 769px) {
+    .app-screen {
+        max-width: 100%;
+        margin: 0;
+        background: #f8f9fa;
+        box-shadow: none;
+    }
+}
+
+/* ---- Header superior responsivo ---- */
 .app-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 14px 18px;
+    padding: 12px 18px;
     background: #ffffff;
     border-bottom: 1px solid #e8e8e8;
     position: sticky;
     top: 0;
-    z-index: 100;
+    z-index: 1000;
+}
+
+@media (min-width: 769px) {
+    .app-header {
+        padding: 12px 36px;
+        border-bottom: 1px solid #e5e7eb;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+}
+
+.header-brand-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.header-brand-link {
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: -0.4px;
+    color: #111;
+}
+
+.header-brand-link:hover {
+    color: #111;
+}
+
+.brand-b {
+    color: #8B1E1E;
+    font-weight: 900;
+    margin-right: 1px;
+}
+
+.header-logo-img {
+    max-height: 28px;
+    width: auto;
+    object-fit: contain;
+    margin-right: 8px;
+}
+
+.brand-text {
+    color: #111;
+}
+
+.brand-sub {
+    font-weight: 600;
+    color: #8B1E1E;
+}
+
+/* ---- Navegación Desktop (Oculta en móviles) ---- */
+.desktop-nav-links {
+    display: none;
+}
+
+@media (min-width: 769px) {
+    .desktop-nav-links {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .desktop-nav-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 7px 16px;
+        border-radius: 9999px;
+        text-decoration: none;
+        color: #4b5563;
+        font-size: 13.5px;
+        font-weight: 600;
+        transition: all 0.15s ease;
+    }
+
+    .desktop-nav-item:hover {
+        color: #111;
+        background: #f3f4f6;
+    }
+
+    .desktop-nav-item.active {
+        color: #8B1E1E;
+        background: #fef2f2;
+    }
+
+    .desktop-nav-item svg {
+        width: 17px;
+        height: 17px;
+    }
+}
+
+.header-actions-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.btn-crear-desktop {
+    display: none;
+}
+
+@media (min-width: 769px) {
+    .btn-crear-desktop {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 16px;
+        background: #111;
+        color: #fff;
+        border-radius: 9999px;
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: background 0.15s ease, transform 0.1s ease;
+    }
+
+    .btn-crear-desktop:hover {
+        background: #2b2b2b;
+        color: #fff;
+        transform: translateY(-1px);
+    }
 }
 
 .app-header .app-title {
@@ -133,8 +267,8 @@ html, body {
 /* ---- FAB fijo — por encima de Leaflet y del bottom nav ---- */
 .fab-fixed {
     position: fixed;
-    bottom: 80px;
-    right: calc(50% - 215px + 16px);
+    bottom: 78px;
+    right: 20px;
     width: 56px;
     height: 56px;
     border-radius: 50%;
@@ -144,40 +278,45 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
     cursor: pointer;
     text-decoration: none;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
     z-index: 9999;
 }
 
-@media (max-width: 430px) {
+@media (min-width: 769px) {
     .fab-fixed {
-        right: 16px;
+        display: none !important;
     }
 }
 
 .fab-fixed:hover,
 .fab:hover {
-    transform: scale(1.08);
+    transform: scale(1.06);
     box-shadow: 0 6px 20px rgba(0,0,0,0.35);
     color: #fff;
 }
 
-/* ---- Bottom Navigation Bar ---- */
+/* ---- Bottom Navigation Bar (Solo visible en móviles) ---- */
 .bottom-nav {
     position: fixed;
     bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
+    left: 0;
+    right: 0;
     width: 100%;
-    max-width: 430px;
-    height: 64px;
-    background: #fff;
-    border-top: 1px solid #e0e0e0;
+    height: 62px;
+    background: #ffffff;
+    border-top: 1px solid #e5e7eb;
     display: flex;
     align-items: stretch;
-    z-index: 200;
+    z-index: 2000;
+}
+
+@media (min-width: 769px) {
+    .bottom-nav {
+        display: none !important;
+    }
 }
 
 .bottom-nav a {
@@ -717,3 +856,85 @@ a:hover {
     from { transform: scale(0); opacity: 0; }
     to   { transform: scale(1); opacity: 1; }
 }
+
+/* ========================================================
+   RESPONSIVE DESKTOP & LAPTOP ADAPTATION
+   ======================================================== */
+
+/* Contenedor centralizado para vistas de contenido en Desktop */
+.page-container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px 16px 80px;
+}
+
+@media (min-width: 769px) {
+    .page-container {
+        padding: 32px 32px 48px;
+    }
+}
+
+/* Adaptación del Mapa a pantalla completa en Desktop */
+@media (min-width: 769px) {
+    #mapa {
+        height: calc(100vh - 58px) !important;
+    }
+}
+
+/* Grid de Mis Reportes en Desktop */
+@media (min-width: 769px) {
+    .mis-reportes-grid {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)) !important;
+        gap: 20px !important;
+        padding-bottom: 40px !important;
+    }
+}
+
+/* Feed centrado y legible en Comunidad para Desktop */
+@media (min-width: 769px) {
+    .comunidad-feed-wrap {
+        max-width: 680px;
+        margin: 0 auto;
+        width: 100%;
+        padding-bottom: 40px;
+    }
+}
+
+/* Auth (Login / Registro) centrado en Desktop */
+@media (min-width: 769px) {
+    .auth-page-body {
+        background: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 40px 20px;
+    }
+
+    .auth-card {
+        width: 100%;
+        max-width: 460px;
+        background: #ffffff;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+        border: 1px solid #e5e7eb;
+        padding: 44px 38px;
+    }
+}
+
+/* Formulario Crear Reporte responsivo en Desktop */
+@media (min-width: 769px) {
+    .crear-reporte-wrap {
+        max-width: 640px;
+        margin: 24px auto 60px auto;
+        background: #ffffff;
+        border-radius: 16px;
+        border: 1px solid #e5e7eb;
+        padding: 32px 36px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+    }
+}
+
+
