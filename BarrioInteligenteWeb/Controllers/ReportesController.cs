@@ -19,19 +19,22 @@ namespace BarrioInteligenteWeb.Controllers
         private readonly ILogger<ReportesController> _logger;
         private readonly IHubContext<ReportesHub> _hubContext;
         private readonly IProfanityService _profanityService;
+        private readonly IReputacionService _reputacionService;
 
         public ReportesController(
             ApplicationDbContext context,
             IWebHostEnvironment env,
             ILogger<ReportesController> logger,
             IHubContext<ReportesHub> hubContext,
-            IProfanityService profanityService)
+            IProfanityService profanityService,
+            IReputacionService reputacionService)
         {
             _context = context;
             _env = env;
             _logger = logger;
             _hubContext = hubContext;
             _profanityService = profanityService;
+            _reputacionService = reputacionService;
         }
 
         private int UsuarioActualId =>
@@ -288,7 +291,14 @@ namespace BarrioInteligenteWeb.Controllers
                 ModelState.Remove("Usuario");
                 if (ModelState.IsValid)
                 {
-                    // ── Filtro de profanidades en descripción ANTES de guardar ──
+                    // ── Filtro de profanidades en título y descripción ANTES de guardar ──
+                    if (!string.IsNullOrWhiteSpace(reporte.Titulo))
+                    {
+                        var filtroTitulo = await _profanityService.ValidarYCensurarAsync(
+                            reporte.Titulo, UsuarioActualId);
+                        reporte.Titulo = filtroTitulo.TextoCensurado;
+                    }
+
                     if (!string.IsNullOrWhiteSpace(reporte.Descripcion))
                     {
                         var filtroDesc = await _profanityService.ValidarYCensurarAsync(
@@ -298,6 +308,9 @@ namespace BarrioInteligenteWeb.Controllers
 
                     _context.Reportes.Add(reporte);
                     await _context.SaveChangesAsync();
+
+                    // Recompensa cívica: +5 puntos por publicar reporte comunitario
+                    await _reputacionService.AgregarPuntosAsync(UsuarioActualId, 5, "Reporte cívico publicado");
 
                     await _hubContext.Clients.All.SendAsync("RecibirNuevoReporte", reporte.Latitud, reporte.Longitud, reporte.Titulo, reporte.Categoria);
 
@@ -428,6 +441,12 @@ namespace BarrioInteligenteWeb.Controllers
                     });
                     reporte.Upvotes++;
                     estaConfirmado = true;
+
+                    // Si el voto viene de otro usuario, premiar al autor del reporte (+2 pts)
+                    if (reporte.UsuarioId != UsuarioActualId)
+                    {
+                        await _reputacionService.AgregarPuntosAsync(reporte.UsuarioId, 2, "Validación ciudadana recibida en tu reporte");
+                    }
                 }
 
                 await _context.SaveChangesAsync();

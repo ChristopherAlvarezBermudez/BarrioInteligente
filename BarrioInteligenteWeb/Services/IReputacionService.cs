@@ -4,5 +4,6 @@ namespace BarrioInteligenteWeb.Services
     {
         Task AgregarPuntosAsync(int usuarioId, int puntos, string motivo);
         Task<int> GetPuntosAsync(int usuarioId);
+        Task SincronizarInsigniasAsync(int usuarioId);
     }
 }

@@ -59,16 +59,30 @@ namespace BarrioInteligenteWeb.Controllers
             {
                 await _reputacionService.AgregarPuntosAsync(usuarioId, diff, "Ajuste manual por Administrador");
             }
+            else
+            {
+                // Asegurar que insignias estén sincronizadas incluso si no hubo cambio neto de puntos
+                await _reputacionService.SincronizarInsigniasAsync(usuarioId);
+            }
 
-            await _context.Entry(usuario).ReloadAsync();
+            var usuarioActualizado = await _context.Usuarios
+                .AsNoTracking()
+                .Include(u => u.Insignias)
+                .FirstOrDefaultAsync(u => u.Id == usuarioId);
 
             return Json(new { 
                 success = true, 
-                newReputation = usuario.Reputacion.ToString(),
-                puntos = usuario.PuntosReputacion,
-                estaSuspendido = usuario.EstaSuspendido,
-                motivoSuspension = usuario.MotivoSuspension,
-                fechaSuspension = usuario.FechaSuspensionHasta?.ToString("dd/MM/yyyy HH:mm")
+                newReputation = usuarioActualizado!.Reputacion.ToString(),
+                puntos = usuarioActualizado.PuntosReputacion,
+                estaSuspendido = usuarioActualizado.EstaSuspendido,
+                motivoSuspension = usuarioActualizado.MotivoSuspension,
+                fechaSuspension = usuarioActualizado.FechaSuspensionHasta?.ToString("dd/MM/yyyy HH:mm"),
+                insignias = usuarioActualizado.Insignias.Select(i => new {
+                    id = i.Id,
+                    nombre = i.Nombre,
+                    iconoEmoji = i.IconoEmoji,
+                    colorCss = i.ColorCss
+                })
             });
         }
 
@@ -78,7 +92,7 @@ namespace BarrioInteligenteWeb.Controllers
         {
             if (!await IsValidAdminAsync()) return Json(new { success = false, message = "Acceso denegado." });
 
-            var usuario = await _context.Usuarios.FindAsync(usuarioId);
+            var usuario = await _context.Usuarios.Include(u => u.Insignias).FirstOrDefaultAsync(u => u.Id == usuarioId);
             if (usuario == null) return Json(new { success = false, message = "Usuario no encontrado." });
 
             usuario.FechaSuspensionHasta = null;
@@ -89,6 +103,7 @@ namespace BarrioInteligenteWeb.Controllers
                 usuario.Reputacion = NivelReputacion.Critica;
                 usuario.MotivoReputacion = "Suspensión levantada manualmente por Administrador.";
             }
+            await _reputacionService.SincronizarInsigniasAsync(usuarioId);
             await _context.SaveChangesAsync();
 
             return Json(new { success = true, message = $"Suspensión levantada para {usuario.NombreCompleto}." });
@@ -96,7 +111,22 @@ namespace BarrioInteligenteWeb.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CrearInsignia(string nombre, string iconoEmoji, string colorCss)
+        public async Task<IActionResult> SincronizarTodasLasInsignias()
+        {
+            if (!await IsValidAdminAsync()) return Json(new { success = false, message = "Acceso denegado." });
+
+            var usuarios = await _context.Usuarios.Select(u => u.Id).ToListAsync();
+            foreach (var id in usuarios)
+            {
+                await _reputacionService.SincronizarInsigniasAsync(id);
+            }
+
+            return Json(new { success = true, message = $"Se sincronizaron automáticamente las insignias de {usuarios.Count} ciudadanos según sus puntos." });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CrearInsignia(string nombre, string iconoEmoji, string colorCss, int puntosRequeridos = 50)
         {
             if (!await IsValidAdminAsync()) return Json(new { success = false, message = "Acceso denegado." });
 
@@ -109,7 +139,8 @@ namespace BarrioInteligenteWeb.Controllers
             {
                 Nombre = nombre.Trim(),
                 IconoEmoji = iconoEmoji.Trim(),
-                ColorCss = string.IsNullOrWhiteSpace(colorCss) ? "#3b82f6" : colorCss.Trim()
+                ColorCss = string.IsNullOrWhiteSpace(colorCss) ? "#3b82f6" : colorCss.Trim(),
+                PuntosRequeridos = puntosRequeridos > 0 ? puntosRequeridos : 50
             };
 
             _context.Insignias.Add(insignia);
@@ -118,7 +149,7 @@ namespace BarrioInteligenteWeb.Controllers
             return Json(new { 
                 success = true, 
                 message = $"Insignia '{insignia.Nombre}' creada correctamente.",
-                insignia = new { id = insignia.Id, nombre = insignia.Nombre, iconoEmoji = insignia.IconoEmoji, colorCss = insignia.ColorCss }
+                insignia = new { id = insignia.Id, nombre = insignia.Nombre, iconoEmoji = insignia.IconoEmoji, colorCss = insignia.ColorCss, puntosRequeridos = insignia.PuntosRequeridos }
             });
         }
 

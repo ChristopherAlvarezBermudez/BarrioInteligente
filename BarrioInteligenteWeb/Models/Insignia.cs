@@ -19,6 +19,8 @@ namespace BarrioInteligenteWeb.Models
         [MaxLength(20)]
         public string ColorCss { get; set; } = "#3b82f6"; // Default Blue
 
+        public int PuntosRequeridos { get; set; } = 50;
+
         // Relación Muchos-a-Muchos con Usuarios
         public virtual ICollection<Usuario> Usuarios { get; set; } = new List<Usuario>();
     }

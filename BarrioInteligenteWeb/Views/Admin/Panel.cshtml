@@ -1,7 +1,7 @@
 @model IEnumerable<BarrioInteligenteWeb.Models.Usuario>
 @{
     Layout = null;
-    ViewData["Title"] = "Panel de Control & RRHH";
+    ViewData["Title"] = "Panel de Administración";
     ViewData["ActiveTab"] = "Admin";
     var insigniasDisponibles = ViewBag.InsigniasDisponibles as List<BarrioInteligenteWeb.Models.Insignia> ?? new List<BarrioInteligenteWeb.Models.Insignia>();
 
@@ -17,7 +17,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Panel de Control & RRHH — Barrio Inteligente</title>
+    <title>Panel de Administración — Barrio Inteligente</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/barrio.css" asp-append-version="true" />
     <style>
@@ -33,7 +33,7 @@
             }
         }
 
-        /* Tarjetas de Métricas RRHH */
+        /* Tarjetas de Métricas de Administración */
         .hr-stats-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -43,104 +43,135 @@
         @@media (min-width: 992px) {
             .hr-stats-grid {
                 grid-template-columns: repeat(5, 1fr);
-                gap: 18px;
             }
         }
 
         .hr-stat-card {
             background: #ffffff;
             border: 1px solid #e5e7eb;
-            border-radius: 16px;
+            border-radius: 14px;
             padding: 16px 18px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.03);
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            justify-content: space-between;
+            position: relative;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+            transition: all 0.2s ease;
+        }
+        .hr-stat-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            transform: translateY(-2px);
         }
         .hr-stat-label {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 700;
-            color: #6b7280;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            color: #6b7280;
+            margin-bottom: 4px;
         }
         .hr-stat-val {
-            font-size: 24px;
+            font-size: 26px;
             font-weight: 800;
-            color: #111;
+            color: #111827;
+            line-height: 1.1;
         }
         .hr-stat-badge {
-            font-size: 11px;
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 6px;
             font-weight: 600;
-            margin-top: 4px;
+            margin-top: 8px;
             width: fit-content;
         }
 
-        /* Tabla y Tarjeta Principal */
+        /* Tabla y Tarjeta */
         .admin-card {
             background: #ffffff;
-            border-radius: 18px;
             border: 1px solid #e5e7eb;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+            border-radius: 16px;
             overflow: hidden;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
         }
-
         .admin-table-header {
-            padding: 18px 22px;
+            padding: 16px 20px;
             border-bottom: 1px solid #f1f5f9;
-            background: #ffffff;
+            background: #fafafa;
             display: flex;
             flex-wrap: wrap;
-            gap: 14px;
             justify-content: space-between;
             align-items: center;
+            gap: 12px;
         }
 
         /* Badges de Roles */
         .badge-rol {
             display: inline-flex;
             align-items: center;
-            gap: 5px;
-            padding: 5px 10px;
-            border-radius: 9999px;
-            font-size: 11px;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 11.5px;
             font-weight: 700;
-            letter-spacing: 0.2px;
+            letter-spacing: 0.3px;
         }
         .badge-rol-admin {
-            background: #fee2e2;
+            background-color: #fee2e2;
             color: #991b1b;
             border: 1px solid #fecaca;
         }
         .badge-rol-inspector {
-            background: #dbeafe;
-            color: #1e40af;
-            border: 1px solid #bfdbfe;
+            background-color: #e0f2fe;
+            color: #0369a1;
+            border: 1px solid #bae6fd;
         }
         .badge-rol-moderador {
-            background: #f3e8ff;
-            color: #6b21a8;
+            background-color: #f3e8ff;
+            color: #7e22ce;
             border: 1px solid #e9d5ff;
         }
         .badge-rol-ciudadano {
-            background: #f3f4f6;
-            color: #4b5563;
-            border: 1px solid #e5e7eb;
+            background-color: #f1f5f9;
+            color: #475569;
+            border: 1px solid #e2e8f0;
         }
 
+        /* Filtros */
+        .btn-filter {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid #e5e7eb;
+            background: #fff;
+            color: #4b5563;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .btn-filter:hover {
+            background: #f3f4f6;
+        }
+        .btn-filter.active {
+            background: #111827;
+            color: #fff;
+            border-color: #111827;
+        }
+
+        /* Círculo de avatar */
         .user-avatar-circle {
             width: 42px;
             height: 42px;
             border-radius: 50%;
-            background: #f3f4f6;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 800;
-            color: #374151;
-            overflow: hidden;
-            flex-shrink: 0;
-            border: 1px solid #e5e7eb;
+            font-weight: 700;
+            font-size: 15px;
+            background: #e2e8f0;
+            color: #334155;
+            object-fit: cover;
+            border: 2px solid #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         .user-avatar-circle img {
             width: 100%;
@@ -178,7 +209,7 @@
         <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
             <div>
                 <div class="d-flex align-items-center gap-2 mb-1">
-                    <span class="badge" style="background:#8B1E1E;color:#fff;font-size:11px;padding:4px 8px;border-radius:6px;">ADMINISTRACIÓN & RRHH</span>
+                    <span class="badge" style="background:#8B1E1E;color:#fff;font-size:11px;padding:4px 8px;border-radius:6px;">ADMINISTRACIÓN</span>
                     <span class="text-muted small">• Solo visible por Steven (Admin)</span>
                 </div>
                 <h2 class="fw-bold mb-1" style="font-size:1.6rem; letter-spacing:-0.5px; color:#111;">Panel de Gestión de Personal y Ciudadanos</h2>
@@ -243,7 +274,7 @@
                             <th class="py-3">Rol Corporativo</th>
                             <th class="py-3">Reputación</th>
                             <th class="py-3">Insignias</th>
-                            <th class="text-end pe-4 py-3">Acciones RRHH</th>
+                            <th class="text-end pe-4 py-3">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -345,13 +376,13 @@
     @await Html.PartialAsync("_BottomNav")
 </div>
 
-<!-- Modal Gestión Integral (RRHH Roles + Reputación + Insignias) -->
+<!-- Modal Gestión Integral (Roles + Reputación + Insignias) -->
 <div class="modal fade" id="gestionModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content rounded-4 border-0 shadow-lg">
       <div class="modal-header border-bottom pb-3" style="background:#fafafa; border-radius: 16px 16px 0 0;">
         <div>
-            <span class="badge bg-dark text-white mb-1" style="font-size: 10px;">GESTIÓN RRHH</span>
+            <span class="badge bg-dark text-white mb-1" style="font-size: 10px;">ADMINISTRACIÓN</span>
             <h5 class="modal-title fw-bold mb-0" style="color:#111;">Gestionar: <span id="mNombre" class="text-danger"></span></h5>
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
@@ -408,17 +439,22 @@
             <div id="puntosFeedback" class="small mt-2" style="display:none;"></div>
         </div>
 
-        <!-- SECCIÓN 3: INSIGNIAS COMUNITARIAS -->
+        <!-- SECCIÓN 3: INSIGNIAS COMUNITARIAS AUTOMÁTICAS -->
         <div>
-            <label class="form-label fw-bold d-flex align-items-center gap-2 mb-1" style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #374151;">
-                <span>🏅 Condecoraciones e Insignias</span>
-            </label>
-            <p class="text-muted small mb-2">Toca una insignia para otorgarla o revocarla de inmediato (1 clic).</p>
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <label class="form-label fw-bold d-flex align-items-center gap-2 mb-0" style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #374151;">
+                    <span>🏅 Insignias Cívicas (Automáticas por Puntos)</span>
+                </label>
+                <span class="badge bg-primary text-white" style="font-size: 10px;">100% AUTOMÁTICO</span>
+            </div>
+            <p class="text-muted small mb-2">
+                Se desbloquean automáticamente según los puntos acumulados (de 50 a 500 pts para la condecoración máxima). Si los puntos caen a &le; 0 pts, se revocan todas las insignias inmediatamente.
+            </p>
             <div class="d-flex flex-wrap gap-2 mb-3" id="modalInsigniasContainer">
                 @foreach(var i in insigniasDisponibles)
                 {
-                    <button type="button" class="btn btn-sm btn-outline-dark rounded-pill btn-toggle-ins" onclick="toggleInsignia(@i.Id, this)" data-ins-id="@i.Id">
-                        @i.IconoEmoji @i.Nombre
+                    <button type="button" class="btn btn-sm btn-outline-dark rounded-pill btn-toggle-ins" onclick="toggleInsignia(@i.Id, this)" data-ins-id="@i.Id" title="Requiere @i.PuntosRequeridos pts">
+                        @i.IconoEmoji @i.Nombre <span class="badge bg-light text-dark ms-1" style="font-size:9px;">@i.PuntosRequeridos pts</span>
                     </button>
                 }
             </div>
@@ -634,6 +670,34 @@
                     badgeRep.textContent = data.newReputation;
                 }
 
+                // Sincronizar insignias automáticas en la tabla y en el modal
+                if (data.insignias !== undefined) {
+                    const celdaInsignias = document.getElementById(`insignias-${currentUserId}`);
+                    if (celdaInsignias) {
+                        if (data.insignias.length === 0) {
+                            celdaInsignias.innerHTML = '<span class="text-muted small">Sin insignias</span>';
+                        } else {
+                            celdaInsignias.innerHTML = data.insignias.map(i => 
+                                `<span class="badge rounded-pill me-1 mb-1 badge-insignia" data-id="${i.id}" style="background-color:${i.colorCss};color:#fff;font-size:11px;">
+                                    ${i.iconoEmoji} ${i.nombre}
+                                </span>`
+                            ).join('');
+                        }
+                    }
+
+                    const activeIds = new Set(data.insignias.map(i => i.id));
+                    document.querySelectorAll('#modalInsigniasContainer .btn-toggle-ins').forEach(btn => {
+                        const bId = parseInt(btn.getAttribute('data-ins-id'));
+                        if (activeIds.has(bId)) {
+                            btn.classList.add('active', 'btn-dark');
+                            btn.classList.remove('btn-outline-dark');
+                        } else {
+                            btn.classList.remove('active', 'btn-dark');
+                            btn.classList.add('btn-outline-dark');
+                        }
+                    });
+                }
+
                 // Si se suspendió automáticamente
                 const alertSusp = document.getElementById('mSuspensionAlert');
                 const detSusp = document.getElementById('mSuspensionDetalle');
@@ -693,6 +757,18 @@
                 document.getElementById('mPuntos').value = 0;
                 const repElem = document.getElementById(`rep-puntos-${currentUserId}`);
                 if (repElem) repElem.textContent = '0 pts';
+
+                const celdaInsignias = document.getElementById(`insignias-${currentUserId}`);
+                if (celdaInsignias) {
+                    celdaInsignias.innerHTML = '<span class="text-muted small">Sin insignias</span>';
+                }
+                document.querySelectorAll('#modalInsigniasContainer .btn-toggle-ins').forEach(btn => {
+                    btn.classList.remove('active', 'btn-dark');
+                    btn.classList.add('btn-outline-dark');
+                });
+
+                const badgeRep = document.getElementById(`rep-badge-${currentUserId}`);
+                if (badgeRep) badgeRep.textContent = 'Critica';
 
                 const fb = document.getElementById('puntosFeedback');
                 fb.style.display = 'block';

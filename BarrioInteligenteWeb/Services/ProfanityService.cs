@@ -8,10 +8,6 @@ namespace BarrioInteligenteWeb.Services
 {
     public class ProfanityService : IProfanityService
     {
-        private readonly ApplicationDbContext _context;
-        private readonly IHttpClientFactory _httpClientFactory;
-        private readonly IConfiguration _configuration;
-        private readonly ILogger<ProfanityService> _logger;
 
         // ══════════════════════════════════════════════════════════════
         // HASHSET MASIVO — Jerga dominicana + variantes leetspeak
@@ -282,7 +278,17 @@ namespace BarrioInteligenteWeb.Services
             "soplon","s0pl0n","bocina","b0c1n4",
             "loco","l0c0","loca","l0c4","loquito","l0qv1t0","loquita","l0qv1t4",
             "pendejo","pendeja","cabron","cabrón","cabrona","culo","joder","jodido","jodida",
-            "bastardo","bastarda","hijodeputa"
+            "bastardo","bastarda","hijodeputa",
+            // ── Dominicanismos expandidos y términos internacionales ──
+            "chivato","chivata","chivaton","chivatona","chivaterio",
+            "guaremate","guaremates","gw4r3m4t3",
+            "popi_de_pacotilla",
+            "toton","totona",
+            "singaera","singadera","singao","singada",
+            "rapaera","rapadera","rapao","rapada",
+            "mierdaza","mieldaza",
+            "wevazo","guebazo","huevazo",
+            "fuck","fucking","fucker","motherfucker","shit","bitch","bitches","asshole","cunt","dick","pussy"
         };
 
         // ══════════════════════════════════════════════════════════════
@@ -308,20 +314,28 @@ namespace BarrioInteligenteWeb.Services
             );
         }
 
+        private readonly ApplicationDbContext _context;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IConfiguration _configuration;
+        private readonly ILogger<ProfanityService> _logger;
+        private readonly IReputacionService _reputacionService;
+
         public ProfanityService(
             ApplicationDbContext context,
             IHttpClientFactory httpClientFactory,
             IConfiguration configuration,
-            ILogger<ProfanityService> logger)
+            ILogger<ProfanityService> logger,
+            IReputacionService reputacionService)
         {
             _context = context;
             _httpClientFactory = httpClientFactory;
             _configuration = configuration;
             _logger = logger;
+            _reputacionService = reputacionService;
         }
 
         // ══════════════════════════════════════════════════════════════
-        // PIPELINE PRINCIPAL
+        // PIPELINE PRINCIPAL DE CENSURA Y MODERACIÓN
         // ══════════════════════════════════════════════════════════════
         public async Task<ProfanityResult> ValidarYCensurarAsync(string texto, int usuarioId)
         {
@@ -335,123 +349,165 @@ namespace BarrioInteligenteWeb.Services
             if (string.IsNullOrWhiteSpace(texto))
                 return resultado;
 
-            // ┌─────────────────────────────────────────────┐
-            // │ PASO 0: Normalización del texto entrante    │
-            // │  → ToLowerInvariant + Eliminar diacríticos  │
-            // └─────────────────────────────────────────────┘
-            var textoNormalizado = RemoverDiacriticos(texto.ToLowerInvariant());
+            // ┌────────────────────────────────────────────────────────────┐
+            // │ PASO 1: Mapeo de caracteres 1:1 (Acentos y Leetspeak)      │
+            // │ Garantiza preservación exacta de longitud e índices        │
+            // └────────────────────────────────────────────────────────────┘
+            bool[] mask = new bool[texto.Length];
 
-            // ┌─────────────────────────────────────────────┐
-            // │ CAPA 1: Diccionario local (Regex + HashSet) │
-            // └─────────────────────────────────────────────┘
-            var matches = _regexProfanidad.Matches(textoNormalizado);
-            if (matches.Count > 0)
+            char[] charsNorm = new char[texto.Length];
+            char[] charsLeet = new char[texto.Length];
+
+            for (int i = 0; i < texto.Length; i++)
             {
-                resultado.FueCensurado = true;
-                foreach (Match m in matches)
+                char c = char.ToLowerInvariant(texto[i]);
+                charsNorm[i] = c switch
                 {
-                    var palabra = m.Value.ToLowerInvariant();
-                    if (!resultado.PalabrasDetectadas.Contains(palabra))
-                        resultado.PalabrasDetectadas.Add(palabra);
-                }
+                    'á' or 'à' or 'ä' or 'â' => 'a',
+                    'é' or 'è' or 'ë' or 'ê' => 'e',
+                    'í' or 'ì' or 'ï' or 'î' => 'i',
+                    'ó' or 'ò' or 'ö' or 'ô' => 'o',
+                    'ú' or 'ù' or 'ü' or 'û' => 'u',
+                    _ => c
+                };
 
-                // Censurar sobre el texto ORIGINAL preservando posiciones
-                // Usamos el texto normalizado para encontrar posiciones, 
-                // luego reemplazamos en el original
-                resultado.TextoCensurado = _regexProfanidad.Replace(
-                    texto, // Operar sobre el original para preservar casing del resto
-                    match => new string('*', match.Value.Length));
-
-                _logger.LogWarning(
-                    "[Profanity-Local] Usuario {UsuarioId} — {Count} palabra(s) censurada(s): {Palabras}",
-                    usuarioId, matches.Count, string.Join(", ", resultado.PalabrasDetectadas));
+                charsLeet[i] = c switch
+                {
+                    'á' or 'à' or 'ä' or 'â' or '4' or '@' => 'a',
+                    'é' or 'è' or 'ë' or 'ê' or '3' => 'e',
+                    'í' or 'ì' or 'ï' or 'î' or '1' or '!' or '|' => 'i',
+                    'ó' or 'ò' or 'ö' or 'ô' or '0' => 'o',
+                    'ú' or 'ù' or 'ü' or 'û' or 'v' => 'u',
+                    '5' or '$' => 's',
+                    '7' => 't',
+                    _ => c
+                };
             }
 
-            // ┌─────────────────────────────────────────────┐
-            // │ CAPA 2: API Externa — PurgoMalum (EN/ES)    │
-            // └─────────────────────────────────────────────┘
-            var apiExternaDetecto = await ConsultarPurgoMalumAsync(resultado.TextoCensurado);
+            string sNorm = new string(charsNorm);
+            string sLeet = new string(charsLeet);
 
-            if (apiExternaDetecto && !resultado.FueCensurado)
+            void AplicarMatches(MatchCollection matches)
+            {
+                foreach (Match m in matches)
+                {
+                    if (!m.Success || m.Length == 0) continue;
+                    for (int k = m.Index; k < m.Index + m.Length && k < mask.Length; k++)
+                    {
+                        mask[k] = true;
+                    }
+                    var val = m.Value.ToLowerInvariant();
+                    if (!resultado.PalabrasDetectadas.Contains(val))
+                        resultado.PalabrasDetectadas.Add(val);
+                }
+            }
+
+            // Detección en texto original, normalizado y decodificado leet
+            AplicarMatches(_regexProfanidad.Matches(texto));
+            AplicarMatches(_regexProfanidad.Matches(sNorm));
+            AplicarMatches(_regexProfanidad.Matches(sLeet));
+
+            // Aplicar reemplazo de asteriscos sobre el texto original
+            var sb = new StringBuilder(texto.Length);
+            bool detectadoLocal = false;
+            for (int i = 0; i < texto.Length; i++)
+            {
+                if (mask[i])
+                {
+                    sb.Append('*');
+                    detectadoLocal = true;
+                }
+                else
+                {
+                    sb.Append(texto[i]);
+                }
+            }
+
+            if (detectadoLocal)
             {
                 resultado.FueCensurado = true;
-                resultado.PalabrasDetectadas.Add("[API-PurgoMalum]");
+                resultado.TextoCensurado = sb.ToString();
 
                 _logger.LogWarning(
-                    "[Profanity-API] Usuario {UsuarioId} — texto flaggeado por PurgoMalum",
+                    "[Profanity-Local] Usuario {UsuarioId} — {Count} ofensa(s) censurada(s): {Palabras}",
+                    usuarioId, resultado.PalabrasDetectadas.Count, string.Join(", ", resultado.PalabrasDetectadas));
+            }
+
+            // ┌────────────────────────────────────────────────────────────┐
+            // │ PASO 2: API Externa de Moderación (PurgoMalum / Custom)     │
+            // └────────────────────────────────────────────────────────────┘
+            var apiResultado = await ConsultarApiModeracionAsync(resultado.TextoCensurado);
+            if (apiResultado.FueCensurado)
+            {
+                resultado.FueCensurado = true;
+                resultado.TextoCensurado = apiResultado.TextoCensurado;
+                if (!resultado.PalabrasDetectadas.Contains("[API-Moderacion]"))
+                    resultado.PalabrasDetectadas.Add("[API-Moderacion]");
+
+                _logger.LogWarning(
+                    "[Profanity-API] Usuario {UsuarioId} — censura complementada por API externa",
                     usuarioId);
             }
 
-            // ┌──────────────────────────────────────────────┐
-            // │ PENALIZACIÓN: -10 pts si se censuró algo     │
-            // └──────────────────────────────────────────────┘
+            // ┌────────────────────────────────────────────────────────────┐
+            // │ PASO 3: Penalización y Sincronización Inmediata (-10 pts)   │
+            // └────────────────────────────────────────────────────────────┘
             if (resultado.FueCensurado)
             {
-                await PenalizarUsuarioAsync(usuarioId, 10,
-                    $"Lenguaje ofensivo detectado: {string.Join(", ", resultado.PalabrasDetectadas)}");
+                await _reputacionService.AgregarPuntosAsync(
+                    usuarioId,
+                    -10,
+                    $"Lenguaje inapropiado detectado y censurado: {string.Join(", ", resultado.PalabrasDetectadas)}");
             }
 
             return resultado;
         }
 
         // ══════════════════════════════════════════════════════════════
-        // NORMALIZACIÓN: Remover acentos y diacríticos
-        // "azaroso" == "azaróso" == "ázárósó" después de esto
+        // INTEGRACIÓN CON API EXTERNA DE MODERACIÓN
         // ══════════════════════════════════════════════════════════════
-        private static string RemoverDiacriticos(string texto)
+        private async Task<(bool FueCensurado, string TextoCensurado)> ConsultarApiModeracionAsync(string texto)
         {
-            var normalizado = texto.Normalize(NormalizationForm.FormD);
-            var sb = new StringBuilder(normalizado.Length);
-
-            foreach (var c in normalizado)
-            {
-                var categoria = CharUnicodeInfo.GetUnicodeCategory(c);
-                if (categoria != UnicodeCategory.NonSpacingMark)
-                    sb.Append(c);
-            }
-
-            return sb.ToString().Normalize(NormalizationForm.FormC);
-        }
-
-        // ══════════════════════════════════════════════════════════════
-        // CAPA 2: PurgoMalum API — Consulta gratuita EN/ES
-        // https://www.purgomalum.com/service/containsprofanity?text=...
-        // Retorna "true" o "false" como plain text
-        // ══════════════════════════════════════════════════════════════
-        private async Task<bool> ConsultarPurgoMalumAsync(string texto)
-        {
-            // Si hay una API custom configurada, úsala en su lugar
             var customApiUrl = _configuration["ModerationSettings:ApiUrl"];
             if (!string.IsNullOrEmpty(customApiUrl))
             {
                 return await ConsultarApiCustomAsync(customApiUrl, texto);
             }
 
-            // Default: PurgoMalum (gratuita, sin API key)
-            try
-            {
-                var client = _httpClientFactory.CreateClient("ModerationApi");
-                var encoded = Uri.EscapeDataString(texto);
-                var url = $"https://www.purgomalum.com/service/containsprofanity?text={encoded}";
-
-                var response = await client.GetStringAsync(url);
-                return bool.TryParse(response.Trim(), out var flagged) && flagged;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "[Profanity-PurgoMalum] Error al consultar API. Se continúa solo con filtro local.");
-                return false;
-            }
+            return await ConsultarPurgoMalumAsync(texto);
         }
 
-        // ══════════════════════════════════════════════════════════════
-        // API CUSTOM — Endpoint configurable (preparado para Perspective API)
-        // ══════════════════════════════════════════════════════════════
-        private async Task<bool> ConsultarApiCustomAsync(string apiUrl, string texto)
+        private async Task<(bool FueCensurado, string TextoCensurado)> ConsultarPurgoMalumAsync(string texto)
         {
             try
             {
                 var client = _httpClientFactory.CreateClient("ModerationApi");
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2.5));
+                var encoded = Uri.EscapeDataString(texto);
+                var url = $"https://www.purgomalum.com/service/plain?text={encoded}&fill_char=*";
+
+                var response = await client.GetStringAsync(url, cts.Token);
+                var cleaned = response?.Trim() ?? texto;
+
+                if (!string.Equals(cleaned, texto, StringComparison.Ordinal))
+                {
+                    return (true, cleaned);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("[Profanity-PurgoMalum] API no disponible o timeout ({Msg}). Filtro local activo.", ex.Message);
+            }
+
+            return (false, texto);
+        }
+
+        private async Task<(bool FueCensurado, string TextoCensurado)> ConsultarApiCustomAsync(string apiUrl, string texto)
+        {
+            try
+            {
+                var client = _httpClientFactory.CreateClient("ModerationApi");
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2.5));
                 var apiKey = _configuration["ModerationSettings:ApiKey"] ?? "";
 
                 var request = new HttpRequestMessage(HttpMethod.Post, apiUrl)
@@ -462,77 +518,39 @@ namespace BarrioInteligenteWeb.Services
                 if (!string.IsNullOrEmpty(apiKey))
                     request.Headers.Add("Authorization", $"Bearer {apiKey}");
 
-                var response = await client.SendAsync(request);
+                var response = await client.SendAsync(request, cts.Token);
 
                 if (response.IsSuccessStatusCode)
                 {
                     var json = await response.Content.ReadAsStringAsync();
                     using var doc = System.Text.Json.JsonDocument.Parse(json);
 
-                    // Soporta múltiples formatos de respuesta
-                    if (doc.RootElement.TryGetProperty("flagged", out var flagProp))
-                        return flagProp.GetBoolean();
-                    if (doc.RootElement.TryGetProperty("isToxic", out var toxicProp))
-                        return toxicProp.GetBoolean();
-                    // Perspective API format
+                    if (doc.RootElement.TryGetProperty("flagged", out var flagProp) && flagProp.GetBoolean())
+                        return (true, CensurarTextoCompleto(texto));
+                    if (doc.RootElement.TryGetProperty("isToxic", out var toxicProp) && toxicProp.GetBoolean())
+                        return (true, CensurarTextoCompleto(texto));
                     if (doc.RootElement.TryGetProperty("attributeScores", out var scores))
                     {
                         if (scores.TryGetProperty("TOXICITY", out var toxicity))
                         {
                             var score = toxicity.GetProperty("summaryScore").GetProperty("value").GetDouble();
-                            return score >= 0.7; // Umbral: 70% de toxicidad
+                            if (score >= 0.7)
+                                return (true, CensurarTextoCompleto(texto));
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "[Profanity-CustomAPI] Error al consultar API externa");
+                _logger.LogWarning("[Profanity-CustomAPI] Error al consultar API personalizada: {Msg}", ex.Message);
             }
 
-            return false;
+            return (false, texto);
         }
 
-        // ══════════════════════════════════════════════════════════════
-        // PENALIZACIÓN Y SUSPENSIÓN AUTOMÁTICA POR REPUTACIÓN NEGATIVA
-        // ══════════════════════════════════════════════════════════════
-        private async Task PenalizarUsuarioAsync(int usuarioId, int puntosARestar, string motivo)
+        private static string CensurarTextoCompleto(string texto)
         {
-            var usuario = await _context.Usuarios.FindAsync(usuarioId);
-            if (usuario == null) return;
-
-            // Puntos negativos permitidos sin tope inferior en 0
-            usuario.PuntosReputacion -= puntosARestar;
-            usuario.Reputacion = CalcularNivel(usuario.PuntosReputacion);
-            usuario.MotivoReputacion = motivo;
-
-            // Verificación de suspensión temporal por puntos negativos acumulados
-            if (usuario.PuntosReputacion <= -100)
-            {
-                // Suspensión de 1 semana (7 días)
-                var nuevaSuspension = DateTime.UtcNow.AddDays(7);
-                if (!usuario.FechaSuspensionHasta.HasValue || usuario.FechaSuspensionHasta.Value < nuevaSuspension)
-                {
-                    usuario.FechaSuspensionHasta = nuevaSuspension;
-                }
-                usuario.MotivoSuspension = "Cuenta suspendida temporalmente por 1 semana al acumular -100 pts por reincidencia en faltas graves de lenguaje ofensivo.";
-            }
-            else if (usuario.PuntosReputacion <= -50)
-            {
-                // Suspensión de 2 días
-                var nuevaSuspension = DateTime.UtcNow.AddDays(2);
-                if (!usuario.FechaSuspensionHasta.HasValue || usuario.FechaSuspensionHasta.Value < nuevaSuspension)
-                {
-                    usuario.FechaSuspensionHasta = nuevaSuspension;
-                }
-                usuario.MotivoSuspension = "Cuenta suspendida temporalmente por 2 días al acumular -50 pts en sanciones por lenguaje ofensivo.";
-            }
-
-            await _context.SaveChangesAsync();
-
-            _logger.LogInformation(
-                "[Reputación] Usuario {Id} penalizado -{Puntos}pts → {NuevoPuntaje} ({Nivel}). Motivo: {Motivo}. Suspensión: {Hasta}",
-                usuarioId, puntosARestar, usuario.PuntosReputacion, usuario.Reputacion, motivo, usuario.FechaSuspensionHasta);
+            return Regex.Replace(texto, @"\w+", m => new string('*', m.Length));
         }
 
         /// <summary>
