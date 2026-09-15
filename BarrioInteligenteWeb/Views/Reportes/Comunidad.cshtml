@@ -184,6 +184,7 @@
         .card-footer-social {
             padding: 12px 14px 14px;
             border-top: 1px solid #f0f0f0;
+            background: #ffffff;
         }
         .card-upvotes-social {
             display: flex;
@@ -194,13 +195,34 @@
             color: #555;
         }
         .btn-ver {
-            font-size: 14px;
-            font-weight: 600;
-            border-radius: 20px;
+            height: 44px;
+            font-size: 13.5px;
+            font-weight: 700;
+            border-radius: 12px;
+            background: #0f172a;
+            border: 1.5px solid #0f172a;
+            color: #ffffff !important;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 5px;
+            gap: 6px;
+            text-decoration: none;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            white-space: nowrap;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .btn-ver:hover {
+            background: #1e293b;
+            border-color: #1e293b;
+            color: #ffffff !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.16);
+        }
+        .btn-ver i {
+            transition: transform 0.2s ease;
+        }
+        .btn-ver:hover i {
+            transform: translateX(3px);
         }
 
         /* Botón Confirmar (Like) */
@@ -209,26 +231,41 @@
             align-items: center;
             justify-content: center;
             gap: 6px;
-            font-size: 14px;
+            height: 44px;
+            font-size: 13.5px;
             font-weight: 600;
-            border-radius: 20px;
+            border-radius: 12px;
+            background: #f8fafc;
+            border: 1.5px solid #e2e8f0;
+            color: #334155;
             transition: all 0.2s ease;
             cursor: pointer;
             text-decoration: none;
-            color: #6c757d;
         }
-        .btn-confirmar svg {
-            color: #6c757d;
-            transition: all 0.2s ease;
+        .btn-confirmar .icono-confirmar {
+            font-size: 16px;
+            color: #64748b;
+            transition: transform 0.2s ease, color 0.2s ease;
+        }
+        .btn-confirmar:hover {
+            background: #fef2f2;
+            border-color: #fecaca;
+            color: #dc2626;
+            transform: translateY(-1px);
+        }
+        .btn-confirmar:hover .icono-confirmar {
+            color: #dc2626;
+            transform: scale(1.15);
         }
         
         /* Estado Confirmado Activo */
         .btn-confirmar.confirmado-activo {
-            color: #dc2626 !important; /* Texto rojo */
-            border-color: #fca5a5 !important; /* Borde rojo claro */
-            background-color: #ffffff !important; /* Fondo blanco */
+            color: #dc2626 !important;
+            border-color: #fca5a5 !important;
+            background-color: #fef2f2 !important;
+            font-weight: 700;
         }
-        .btn-confirmar.confirmado-activo svg {
+        .btn-confirmar.confirmado-activo .icono-confirmar {
             color: #dc2626 !important;
         }
 
@@ -495,9 +532,9 @@
 
                     <!-- Footer -->
                     <div class="card-footer-social">
-                        <div class="d-flex gap-2 w-100 mt-3" style="height: 45px;">
+                        <div class="d-flex gap-2 w-100" style="min-height: 44px;">
                             <button type="button" 
-                                    class="btn btn-outline-secondary flex-grow-1 d-flex justify-content-center align-items-center gap-2 btn-confirmar" 
+                                    class="btn-confirmar flex-grow-1 @(yaConfirmo ? "confirmado-activo" : "")" 
                                     data-reporte-id="@r.Id" 
                                     id="btn-confirmar-@r.Id">
                                 <i class="bi @(yaConfirmo ? "bi-heart-fill text-danger" : "bi-heart") icono-confirmar"></i>
@@ -507,8 +544,9 @@
                             </button>
 
                             <a href="@Url.Action("Detalles", "Reportes", new { id = r.Id })" 
-                               class="btn btn-dark d-flex justify-content-center align-items-center px-4 btn-ver">
-                                Ver detalles <i class="bi bi-arrow-right ms-2"></i>
+                               class="btn-ver px-4">
+                                <span>Ver detalles</span>
+                                <i class="bi bi-arrow-right ms-1"></i>
                             </a>
                         </div>
                     </div>

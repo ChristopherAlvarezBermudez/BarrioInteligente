@@ -284,195 +284,220 @@
 </head>
 <body>
 <div class="app-screen">
+    @{
+        ViewData["ActiveTab"] = Model.Reporte.TipoPost == "Consulta" ? "Comunidad" : "MisReportes";
+    }
+    @await Html.PartialAsync("_AppHeader")
 
-    <!-- Portada -->
-    <div class="detail-cover">
-        <a href="@Url.Action("Index", "Reportes")" class="detail-cover-back" aria-label="Volver">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="18" height="18">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"/>
-            </svg>
-        </a>
+    <div class="detalle-page-wrap">
+        <div class="detalle-card-container">
 
-        @if (tieneImagen)
-        {
-            <img src="@Model.Reporte.ImagenUrl" alt="@Model.Reporte.Titulo"
-                 onerror="this.style.display='none';document.getElementById('imgPlaceholder').style.display='flex';" />
-            <div id="imgPlaceholder"
-                 style="display:none;width:100%;height:100%;background:linear-gradient(135deg,#888 0%,#555 100%);align-items:center;justify-content:center;font-size:70px;">
-                @emoji
-            </div>
-        }
-        else
-        {
-            <div style="width:100%;height:100%;background:linear-gradient(135deg,#b8c1c8 0%,#787e85 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;">
-                <span style="font-size:72px;filter:drop-shadow(0 3px 6px rgba(0,0,0,0.3));">@emoji</span>
-                <span style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.85);text-transform:uppercase;letter-spacing:1px;">@Model.Reporte.Categoria</span>
-            </div>
-        }
+            <!-- Portada / Hero -->
+            <div class="detail-cover">
+                <a href="javascript:history.back()" class="detail-cover-back" aria-label="Volver" title="Volver">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" width="18" height="18">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"/>
+                    </svg>
+                </a>
 
-        <div class="detail-cover-overlay">
-            <h1 class="detail-title">@Model.Reporte.Titulo</h1>
-            <p class="detail-time">@tiempoTexto</p>
-            <span class="badge-estado @badgeClass">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" width="12" height="12">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-                </svg>
-                @estado
-            </span>
-            @if (ViewBag.EsAdmin != null && (bool)ViewBag.EsAdmin)
-            {
-                <button class="btn btn-sm btn-danger ms-2" onclick="deleteContent(@Model.Reporte.Id, 'Reporte')" title="Eliminar Reporte completo" style="border-radius:12px;">
-                    <i class="bi bi-trash-fill"></i> Eliminar
-                </button>
-            }
-        </div>
-    </div>
-
-    <!-- Contenido -->
-    <div class="app-body" style="padding-bottom: 200px;">
-        <div class="detail-body">
-            <p class="detail-descripcion">@Model.Reporte.Descripcion</p>
-
-            <!-- Comentarios -->
-            @if (Model.Comentarios.Any())
-            {
-                @foreach (var comentario in Model.Comentarios)
+                @if (tieneImagen)
                 {
-                    var comRep = comentario.Usuario?.Reputacion ?? NivelReputacion.Regular;
-                    var comRingClass = comRep switch {
-                        NivelReputacion.Excelente => "avatar-excellent",
-                        NivelReputacion.Buena     => "avatar-buena",
-                        NivelReputacion.Regular   => "avatar-regular",
-                        NivelReputacion.Mala      => "avatar-mala",
-                        NivelReputacion.Critica   => "avatar-critica",
-                        _ => ""
-                    };
-                    bool comEsExcelente = comRep == NivelReputacion.Excelente;
-                    bool comTieneBadge  = comRep == NivelReputacion.Excelente || comRep == NivelReputacion.Buena;
-                    var comNombre = comentario.Usuario?.NombreCompleto ?? "Usuario";
-                    var comInicial = comNombre.Length > 0 ? comNombre[0].ToString().ToUpper() : "?";
-                    var totalLikes = comentario.Likes?.Count ?? 0;
-                    var estaLikeado = comentario.Likes?.Any(l => l.UsuarioId == currentUserId) ?? false;
-                    <div class="comment-item">
-                        <div class="avatar-wrapper @comRingClass user-clickable" data-user-id="@comentario.UsuarioId" title="Ver perfil de @comNombre">
-                            <div class="comment-avatar">
-                                @if (!string.IsNullOrEmpty(comentario.Usuario?.FotoPerfil))
-                                {
-                                    <img src="@comentario.Usuario.FotoPerfil" alt="@comNombre"
-                                         style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />
-                                }
-                                else
-                                {
-                                    <span style="font-size:15px;font-weight:700;color:#555;">@comInicial</span>
-                                }
-                            </div>
-                            @if (comEsExcelente)
+                    <img src="@Model.Reporte.ImagenUrl" alt="@Model.Reporte.Titulo"
+                         onerror="this.style.display='none';document.getElementById('imgPlaceholder').style.display='flex';" />
+                    <div id="imgPlaceholder"
+                         style="display:none;width:100%;height:100%;background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);align-items:center;justify-content:center;font-size:70px;">
+                        @emoji
+                    </div>
+                }
+                else
+                {
+                    <div class="detail-placeholder">
+                        <span style="font-size:72px;filter:drop-shadow(0 3px 6px rgba(0,0,0,0.3));">@emoji</span>
+                        <span style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.85);text-transform:uppercase;letter-spacing:1px;">@Model.Reporte.Categoria</span>
+                    </div>
+                }
+
+                <!-- Overlay con contraste blindado contra fondos blancos/claros -->
+                <div class="detail-cover-overlay">
+                    <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                        @if (Model.Reporte.TipoPost == "Consulta")
+                        {
+                            <span class="badge-tag-overlay badge-consulta">🏘️ CONSULTA VECINAL</span>
+                        }
+                        else
+                        {
+                            <span class="badge-tag-overlay badge-categoria">@emoji @Model.Reporte.Categoria</span>
+                        }
+                        <span class="badge-estado @badgeClass">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" width="12" height="12">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                            </svg>
+                            @estado
+                        </span>
+                        @if (ViewBag.EsAdmin != null && (bool)ViewBag.EsAdmin)
+                        {
+                            <button class="btn btn-sm btn-danger ms-auto py-1 px-2" onclick="deleteContent(@Model.Reporte.Id, 'Reporte')" title="Eliminar Reporte completo" style="border-radius:10px;font-size:12px;">
+                                <i class="bi bi-trash-fill"></i> Eliminar
+                            </button>
+                        }
+                    </div>
+                    <h1 class="detail-title">@Model.Reporte.Titulo</h1>
+                    <p class="detail-time">
+                        <i class="bi bi-clock me-1"></i> @tiempoTexto
+                        @if (Model.Reporte.Usuario != null)
+                        {
+                            <span class="ms-2">• Por <strong class="user-clickable text-white" data-user-id="@Model.Reporte.UsuarioId">@Model.Reporte.Usuario.NombreCompleto</strong></span>
+                        }
+                    </p>
+                </div>
+            </div>
+
+            <!-- Cuerpo del Reporte -->
+            <div class="detalle-card-body">
+                <div class="detail-descripcion-box">
+                    <h6 class="text-uppercase fw-bold text-muted mb-2" style="font-size: 11px; letter-spacing: 0.5px;">Descripción de la Incidencia</h6>
+                    <p class="detail-descripcion">@Model.Reporte.Descripcion</p>
+                </div>
+
+                <!-- Botón de Confirmación Grande y Cómodo -->
+                <div class="detail-confirmar-wrap mb-4">
+                    <button type="button" 
+                            id="btn-confirmar-detalle"
+                            class="btn w-100 d-flex justify-content-center align-items-center gap-2 btn-confirmar-grande @(Model.YaVoto ? "activo" : "")" 
+                            data-reporte-id="@Model.Reporte.Id">
+                        <i class="bi @(Model.YaVoto ? "bi-heart-fill text-danger" : "bi-heart") icono-heart-detalle"></i>
+                        <span class="texto-contador @(Model.YaVoto ? "text-danger fw-bold" : "")">
+                            <span class="texto-estado">@(Model.YaVoto ? "¡Reporte Confirmado!" : "Confirmar y Validar este Reporte")</span> 
+                            (<span class="conteo">@Model.Reporte.Upvotes</span> confirmaciones)
+                        </span>
+                    </button>
+                </div>
+
+                <!-- Encabezado de Comentarios -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0" style="font-size: 16px; color: #111;">
+                        💬 Conversación Comunitaria 
+                        <span class="badge bg-light text-dark border ms-1" style="font-size: 12px;">@Model.Comentarios.Count</span>
+                    </h5>
+                    <span class="text-muted small">Sé respetuoso con tus vecinos</span>
+                </div>
+
+                <!-- Formulario de Nuevo Comentario (Espacioso) -->
+                <form asp-controller="Reportes" asp-action="AgregarComentario" method="post" class="comment-composer-card mb-4">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="reporteId" value="@Model.Reporte.Id" />
+                    <div class="d-flex gap-3 align-items-start">
+                        <div class="comment-avatar flex-shrink-0" style="width: 42px; height: 42px; font-weight: 700;">
+                            @if (!string.IsNullOrEmpty(ViewBag.FotoPerfil as string))
                             {
-                                <div class="avatar-badge" title="Ciudadano Excelente">⭐</div>
-                            }
-                            else if (comTieneBadge)
-                            {
-                                <div class="avatar-badge" style="background:linear-gradient(135deg,#3b82f6,#2563eb);" title="Buena Reputación">🛡</div>
-                            }
-                        </div>
-                        <div class="comment-content">
-                            <p class="comment-user user-clickable" data-user-id="@comentario.UsuarioId">
-                                @comNombre
-                                @if (ViewBag.EsAdmin != null && (bool)ViewBag.EsAdmin)
-                                {
-                                    <button class="btn btn-sm text-danger p-0 ms-2" onclick="deleteContent(@comentario.Id, 'Comentario')" title="Eliminar Comentario" style="border:none;background:none;">
-                                        <i class="bi bi-trash-fill"></i>
-                                    </button>
-                                }
-                            </p>
-                            <p class="comment-text">@comentario.Texto</p>
-                        </div>
-                        
-                        <div class="btn-upvote btn-like-comentario" data-comentario-id="@comentario.Id" style="cursor:pointer;color:@(estaLikeado ? "#e74c3c" : "#ccc");display:flex;align-items:center;gap:4px;user-select:none;">
-                            @if(estaLikeado)
-                            {
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" class="heart-icon">
-                                    <path d="m11.645 20.91-.007-.003-.022-.012a15.247 15.247 0 0 1-.383-.218 25.18 25.18 0 0 1-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0 1 12 5.052 5.5 5.5 0 0 1 16.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 0 1-4.244 3.17 15.247 15.247 0 0 1-.383.219l-.022.012-.007.004-.003.001a.752.752 0 0 1-.704 0l-.003-.001Z" />
-                                </svg>
+                                <img src="@ViewBag.FotoPerfil" alt="Yo" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />
                             }
                             else
                             {
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="18" height="18" class="heart-icon">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/>
-                                </svg>
+                                <span>@(User.Identity?.Name?.Length > 0 ? User.Identity.Name[0].ToString().ToUpper() : "U")</span>
                             }
-                            <span class="likes-count" style="font-size:12px;font-weight:600;">@totalLikes</span>
+                        </div>
+                        <div class="flex-grow-1 position-relative">
+                            <textarea name="texto" class="form-control comment-textarea-modern" placeholder="Escribe un comentario o aporta detalles sobre este reporte..." rows="2" required></textarea>
+                            <div class="d-flex justify-content-between align-items-center mt-2 flex-wrap gap-2">
+                                <span class="text-muted small" style="font-size: 11px;">Moderación automática activa (lenguaje cívico)</span>
+                                <button type="submit" class="btn btn-dark btn-sm px-4 py-2 rounded-pill d-flex align-items-center gap-2 fw-bold" style="background:#0f172a;">
+                                    <span>Comentar</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" width="14" height="14">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"/>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                     </div>
-                }
-            }
-            else
-            {
-                <p style="font-size:13px;color:#aaa;text-align:center;padding:20px 0;">Sé el primero en comentar.</p>
-            }
+                </form>
+
+                <!-- Listado de Comentarios -->
+                <div class="detail-comentarios-list">
+                    @if (Model.Comentarios.Any())
+                    {
+                        @foreach (var comentario in Model.Comentarios)
+                        {
+                            var comRep = comentario.Usuario?.Reputacion ?? NivelReputacion.Regular;
+                            var comRingClass = comRep switch {
+                                NivelReputacion.Excelente => "avatar-excellent",
+                                NivelReputacion.Buena     => "avatar-buena",
+                                NivelReputacion.Regular   => "avatar-regular",
+                                NivelReputacion.Mala      => "avatar-mala",
+                                NivelReputacion.Critica   => "avatar-critica",
+                                _ => ""
+                            };
+                            bool comEsExcelente = comRep == NivelReputacion.Excelente;
+                            bool comTieneBadge  = comRep == NivelReputacion.Excelente || comRep == NivelReputacion.Buena;
+                            var comNombre = comentario.Usuario?.NombreCompleto ?? "Usuario";
+                            var comInicial = comNombre.Length > 0 ? comNombre[0].ToString().ToUpper() : "?";
+                            var totalLikes = comentario.Likes?.Count ?? 0;
+                            var estaLikeado = comentario.Likes?.Any(l => l.UsuarioId == currentUserId) ?? false;
+                            <div class="comment-item">
+                                <div class="avatar-wrapper @comRingClass user-clickable" data-user-id="@comentario.UsuarioId" title="Ver perfil de @comNombre">
+                                    <div class="comment-avatar">
+                                        @if (!string.IsNullOrEmpty(comentario.Usuario?.FotoPerfil))
+                                        {
+                                            <img src="@comentario.Usuario.FotoPerfil" alt="@comNombre"
+                                                 style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />
+                                        }
+                                        else
+                                        {
+                                            <span style="font-size:15px;font-weight:700;color:#555;">@comInicial</span>
+                                        }
+                                    </div>
+                                    @if (comEsExcelente)
+                                    {
+                                        <div class="avatar-badge" title="Ciudadano Excelente">⭐</div>
+                                    }
+                                    else if (comTieneBadge)
+                                    {
+                                        <div class="avatar-badge" style="background:linear-gradient(135deg,#3b82f6,#2563eb);" title="Buena Reputación">🛡</div>
+                                    }
+                                </div>
+                                <div class="comment-content">
+                                    <p class="comment-user user-clickable" data-user-id="@comentario.UsuarioId">
+                                        @comNombre
+                                        @if (ViewBag.EsAdmin != null && (bool)ViewBag.EsAdmin)
+                                        {
+                                            <button class="btn btn-sm text-danger p-0 ms-2" onclick="deleteContent(@comentario.Id, 'Comentario')" title="Eliminar Comentario" style="border:none;background:none;">
+                                                <i class="bi bi-trash-fill"></i>
+                                            </button>
+                                        }
+                                    </p>
+                                    <p class="comment-text">@comentario.Texto</p>
+                                </div>
+                                
+                                <div class="btn-upvote btn-like-comentario" data-comentario-id="@comentario.Id" style="cursor:pointer;color:@(estaLikeado ? "#e74c3c" : "#ccc");display:flex;align-items:center;gap:4px;user-select:none;">
+                                    @if(estaLikeado)
+                                    {
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" class="heart-icon">
+                                            <path d="m11.645 20.91-.007-.003-.022-.012a15.247 15.247 0 0 1-.383-.218 25.18 25.18 0 0 1-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0 1 12 5.052 5.5 5.5 0 0 1 16.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 0 1-4.244 3.17 15.247 15.247 0 0 1-.383.219l-.022.012-.007.004-.003.001a.752.752 0 0 1-.704 0l-.003-.001Z" />
+                                        </svg>
+                                    }
+                                    else
+                                    {
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="18" height="18" class="heart-icon">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/>
+                                        </svg>
+                                    }
+                                    <span class="likes-count" style="font-size:12px;font-weight:600;">@totalLikes</span>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center py-4 my-2 rounded-3 bg-light border border-dashed">
+                            <p class="text-muted mb-0 small">Sé el primero en comentar y aportar a tu vecindario.</p>
+                        </div>
+                    }
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Controles -->
-    <div style="position:fixed;bottom:64px;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:#fff;z-index:150;border-top:1px solid #ebebeb;">
-
-        <!-- Form Comentario -->
-        <form asp-controller="Reportes" asp-action="AgregarComentario" method="post" class="comment-form">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="reporteId" value="@Model.Reporte.Id" />
-            <textarea name="texto" placeholder="Agrega un comentario..." rows="1"></textarea>
-            <button type="submit" aria-label="Enviar comentario">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" width="18" height="18">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"/>
-                </svg>
-            </button>
-        </form>
-
-        <!-- Boton Reporte -->
-        <div style="padding:10px 18px;">
-            <button type="button" 
-                    id="btn-confirmar-detalle"
-                    class="btn btn-outline-secondary w-100 d-flex justify-content-center align-items-center gap-2" 
-                    data-reporte-id="@Model.Reporte.Id"
-                    style="height: 48px; border-radius: 12px; font-weight: 600; font-size: 15px; background-color: #ffffff;">
-                <i class="bi @(Model.YaVoto ? "bi-heart-fill text-danger" : "bi-heart")"></i>
-                <span class="texto-contador @(Model.YaVoto ? "text-danger fw-bold" : "")" style="color:#555">
-                    <span class="texto-estado">@(Model.YaVoto ? "Confirmado" : "Confirmar Reporte")</span> 
-                    (<span class="conteo">@Model.Reporte.Upvotes</span>)
-                </span>
-            </button>
-        </div>
-    </div>
-
-    <!-- Menu -->
-    <nav class="bottom-nav">
-        <a href="@Url.Action("Index", "Reportes")">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z"/>
-            </svg>
-            <span>Mapa</span>
-        </a>
-        <a href="@Url.Action("MisReportes", "Reportes")" class="active">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/>
-            </svg>
-            <span>Mis Reportes</span>
-        </a>
-        <a href="@Url.Action("Perfil", "Account")">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
-            </svg>
-            <span>Perfil</span>
-        </a>
-    
-          <a href="@Url.Action("Dashboard", "Reportes")">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
-              </svg>
-              <span>Panel</span>
-          </a>
-      </nav>
-
+    @await Html.PartialAsync("_BottomNav")
 </div>
 
 <!-- ══════════════════════════════════════════ -->
